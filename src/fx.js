@@ -9,6 +9,7 @@ export class FX {
     this.flashColor = '224,90,69';
     this.calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
+
   clear() {
     this.parts.length = 0;
     this.floats.length = 0;
@@ -16,6 +17,7 @@ export class FX {
     this.shake = 0;
     this.flash = 0;
   }
+
   burst(x, y, color, count = 10, { speed = 4.5, life = 0.45, gravity = 2.2, size = 2.4, spread = Math.PI * 2, dir = 0 } = {}) {
     if (this.calm) count = Math.min(count, 4);
     for (let i = 0; i < count; i++) {
@@ -28,20 +30,25 @@ export class FX {
       });
     }
   }
+
   float(x, y, text, color, { big = false } = {}) {
     this.floats.push({ x, y, text, color, t: 0, life: big ? 1.15 : 0.85, big });
   }
+
   tracer(x0, y0, x1, y1, color) {
     this.tracers.push({ x0, y0, x1, y1, color, t: 0, life: 0.22 });
   }
+
   shakeBy(amount) {
     if (this.calm) return;
     this.shake = Math.min(14, this.shake + amount);
   }
+
   flashBy(amount, color = '224,90,69') {
     this.flash = Math.min(0.72, this.flash + amount);
     this.flashColor = color;
   }
+
   update(dt) {
     for (let i = this.parts.length - 1; i >= 0; i--) {
       const p = this.parts[i];
@@ -67,5 +74,6 @@ export class FX {
     this.flash *= Math.exp(-dt * 5.5);
     if (this.flash < 0.004) this.flash = 0;
   }
+
   get busy() { return this.parts.length > 0 || this.floats.length > 0; }
 }

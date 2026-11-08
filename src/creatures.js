@@ -3,31 +3,42 @@
 
 const INK = 'rgba(6,8,13,.62)';
 
+
 function rgb(hex) {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
+
+
 function shift(hex, amt) {
   const c = rgb(hex);
   const f = amt > 0 ? v => v + (255 - v) * amt : v => v * (1 + amt);
   return 'rgb(' + c.map(v => Math.max(0, Math.min(255, Math.round(f(v))))).join(',') + ')';
 }
+
+
 function ground(ctx, cx, gy, rx, ry, a) {
   ctx.fillStyle = 'rgba(0,0,0,' + (a === undefined ? 0.42 : a) + ')';
   ctx.beginPath();
   ctx.ellipse(cx, gy, rx, ry, 0, 0, Math.PI * 2);
   ctx.fill();
 }
+
+
 function outline(ctx, t, w) {
   ctx.strokeStyle = INK;
   ctx.lineWidth = Math.max(0.7, t * (w || 0.03));
   ctx.stroke();
 }
+
+
 function limb(ctx, color, width, t) {
   ctx.strokeStyle = color;
   ctx.lineWidth = Math.max(0.9, t * width);
   ctx.lineCap = 'round';
 }
+
+
 function eyes(ctx, x1, y1, x2, y2, r, color) {
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -37,6 +48,7 @@ function eyes(ctx, x1, y1, x2, y2, r, color) {
   ctx.arc(x2, y2, r, 0, Math.PI * 2);
   ctx.fill();
 }
+
 
 export function drawCreature(ctx, key, cx, cy, t, st) {
   const fn = DRAW[key] || DRAW.rat;

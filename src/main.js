@@ -15,6 +15,7 @@ ui.onUse = i => { wake(); game.act({ type: 'use', slot: i }); };
 
 // ---------------------------------------------------------------- sizing
 
+
 const fit = () => renderer.resize();
 fit();
 if (window.ResizeObserver) new ResizeObserver(fit).observe(canvas.parentElement);
@@ -25,11 +26,15 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
 
 let muted = false;
 try { muted = localStorage.getItem('lanternfall.muted') === '1'; } catch (e) { /* no storage */ }
+
+
 const paintSound = () => {
   ui.el.sound.setAttribute('aria-pressed', String(muted));
   ui.el.sound.textContent = muted ? 'muted' : 'sound';
 };
 paintSound();
+
+
 function wake() {
   if (sfx.ready()) sfx.setMuted(muted);
 }
@@ -43,6 +48,7 @@ ui.el.sound.addEventListener('click', () => {
 
 // ---------------------------------------------------------------- run control
 
+
 function startRun(seedText) {
   wake();
   ui.el.log.textContent = '';
@@ -52,6 +58,7 @@ function startRun(seedText) {
   ui.renderInv(game);
   ui.refresh(game);
 }
+
 
 function resumeRun() {
   const data = Game.loadSave();
@@ -147,6 +154,8 @@ document.getElementById('pad').addEventListener('click', ev => {
 // ---------------------------------------------------------------- loop
 
 let last = performance.now();
+
+
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
@@ -177,6 +186,7 @@ function frame(now) {
 }
 
 // ---------------------------------------------------------------- boot
+
 
 function boot(data) {
   ui.setScreen(game);

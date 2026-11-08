@@ -24,6 +24,7 @@ const TILE_GLYPH = {
 };
 const MEMORY_RGB = [44, 50, 64];
 
+
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -491,6 +492,7 @@ export class Renderer {
   }
 }
 
+
 function warmth(base, lit, lant) {
   const warm = Math.min(1, lant * 0.9);
   const r = clamp255(base[0] * lit * (1 + 0.42 * warm));
@@ -498,7 +500,10 @@ function warmth(base, lit, lant) {
   const b = clamp255(base[2] * lit * (1 - 0.26 * warm));
   return `rgb(${r},${g},${b})`;
 }
+
+
 function clamp255(v) { return Math.max(0, Math.min(255, Math.round(v))); }
+
 
 function roundRectPath(ctx, x, y, w, h, r) {
   const rad = Math.min(r, w / 2, h / 2);

@@ -6,6 +6,7 @@ export class Sfx {
     this.muted = false;
     this.noise = null;
   }
+
   ready() {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return true; }
     const Ctor = window.AudioContext || window.webkitAudioContext;
@@ -22,10 +23,12 @@ export class Sfx {
       return true;
     } catch (e) { this.ctx = null; return false; }
   }
+
   setMuted(m) {
     this.muted = m;
     if (this.master) this.master.gain.value = m ? 0 : 0.3;
   }
+
   tone(freq, { type = 'sine', dur = 0.14, gain = 0.3, to = null, delay = 0, curve = 'exp' } = {}) {
     if (!this.ctx || this.muted) return;
     const t = this.ctx.currentTime + delay;
@@ -44,6 +47,7 @@ export class Sfx {
     osc.start(t);
     osc.stop(t + dur + 0.02);
   }
+
   hiss({ dur = 0.12, gain = 0.25, freq = 1400, q = 0.9, type = 'bandpass', to = null, delay = 0 } = {}) {
     if (!this.ctx || this.muted || !this.noise) return;
     const t = this.ctx.currentTime + delay;
@@ -62,6 +66,7 @@ export class Sfx {
     src.start(t);
     src.stop(t + dur + 0.02);
   }
+
   play(name, intensity = 1) {
     if (!this.ctx || this.muted) return;
     switch (name) {

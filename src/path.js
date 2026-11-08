@@ -1,6 +1,7 @@
 export const DX = [0, 1, 0, -1, 1, 1, -1, -1];
 export const DY = [-1, 0, 1, 0, -1, 1, 1, -1];
 
+
 // Breadth-first distance field from a tile; monsters walk it downhill.
 export function flowField(w, h, sx, sy, passable) {
   const dist = new Int16Array(w * h).fill(-1);
@@ -24,6 +25,7 @@ export function flowField(w, h, sx, sy, passable) {
   }
   return dist;
 }
+
 
 export function chebyshev(ax, ay, bx, by) {
   return Math.max(Math.abs(ax - bx), Math.abs(ay - by));

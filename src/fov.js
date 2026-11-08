@@ -4,6 +4,7 @@ const MULT = [
   [-1, 0, 0, -1], [0, -1, -1, 0], [0, 1, -1, 0], [1, 0, 0, -1],
 ];
 
+
 export function computeFOV(cx, cy, radius, blocked, visit) {
   visit(cx, cy, 0);
   for (let i = 0; i < 8; i++) {
@@ -11,6 +12,7 @@ export function computeFOV(cx, cy, radius, blocked, visit) {
     cast(cx, cy, 1, 1, 0, radius, m[0], m[1], m[2], m[3], blocked, visit);
   }
 }
+
 
 function cast(cx, cy, row, start, end, radius, xx, xy, yx, yy, blocked, visit) {
   if (start < end) return;
@@ -41,6 +43,7 @@ function cast(cx, cy, row, start, end, radius, xx, xy, yx, yy, blocked, visit) {
     if (wasBlocked) break;
   }
 }
+
 
 // Bresenham line of sight between two tiles.
 export function hasLine(x0, y0, x1, y1, blocked) {

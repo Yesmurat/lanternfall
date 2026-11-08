@@ -12,6 +12,7 @@ const FINAL_DEPTH = 8;
 const SAVE_KEY = 'lanternfall.run.v1';
 const BEST_KEY = 'lanternfall.best.v1';
 
+
 export class Game {
   constructor(fx, sfx, ui) {
     this.fx = fx;
@@ -160,41 +161,50 @@ export class Game {
   // ---------------------------------------------------------------- queries
 
   def(e) { return MONSTERS[e.key]; }
+
   tileAt(x, y) {
     if (x < 0 || y < 0 || x >= this.map.w || y >= this.map.h) return T.ROCK;
     return this.map.tiles[y * this.map.w + x];
   }
+
   walkable(x, y) {
     const t = this.tileAt(x, y);
     return !blocksMove(t) || t === T.DOOR;
   }
+
   entityAt(x, y) {
     if (!this.entities) return null;
     for (const e of this.entities) if (e.hp > 0 && e.x === x && e.y === y) return e;
     return null;
   }
+
   playerPower() {
     const p = this.player;
     return p.basePower + (p.weapon ? WEAPONS.find(w => w.id === p.weapon).bonus : 0);
   }
+
   playerDef() {
     const p = this.player;
     return p.baseDef + (p.armour ? ARMOUR.find(a => a.id === p.armour).bonus : 0);
   }
+
   lightRadius() {
     const p = this.player;
     const ratio = Math.max(0, p.fuel) / p.maxFuel;
     const r = 1.4 + 6.6 * Math.pow(ratio, 0.55) + p.lightBonus;
     return Math.max(1, Math.min(12, Math.round(r)));
   }
+
   lightAt(x, y) {
     if (x < 0 || y < 0 || x >= this.map.w || y >= this.map.h) return 0;
     return this.map.light[y * this.map.w + x];
   }
+
   isVisible(x, y) {
     if (x < 0 || y < 0 || x >= this.map.w || y >= this.map.h) return false;
     return this.vis[y * this.map.w + x] === 1;
   }
+
   // a shade is only picked out in real light, or when it is already on top of you
   canSeeEntity(e) {
     if (!this.isVisible(e.x, e.y)) return false;
@@ -678,6 +688,7 @@ export class Game {
       localStorage.setItem(BEST_KEY, JSON.stringify(next));
     } catch (e) { /* private window; nothing to keep */ }
   }
+
   static best() {
     try {
       return JSON.parse(localStorage.getItem(BEST_KEY) || 'null');
@@ -739,9 +750,11 @@ export class Game {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.serialize())); }
     catch (e) { /* storage unavailable or full; the run simply will not resume */ }
   }
+
   clearSave() {
     try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* nothing to clear */ }
   }
+
   static loadSave() {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
@@ -750,13 +763,20 @@ export class Game {
   }
 }
 
+
 function rng01(rng) { return rng.next() * 0.9; }
+
+
 function hexToRgb(hex) {
   const n = parseInt(hex.slice(1), 16);
   return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
 }
+
+
 function indefinite(word) {
   return (/^[aeiou]/i.test(word) ? 'an ' : 'a ') + word;
 }
+
+
 function capital(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 export { FINAL_DEPTH };

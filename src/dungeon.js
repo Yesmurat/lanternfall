@@ -8,12 +8,16 @@ export const T = {
 export const MAP_W = 64;
 export const MAP_H = 40;
 
+
 export function blocksMove(t) {
   return t === T.ROCK || t === T.WALL || t === T.DOOR || t === T.BRAZIER;
 }
+
+
 export function blocksSight(t) {
   return t === T.ROCK || t === T.WALL || t === T.DOOR;
 }
+
 
 export function generate(rng, depth) {
   const w = MAP_W, h = MAP_H;

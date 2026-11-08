@@ -44,6 +44,7 @@ export const PARTS = [
 
 export const XP_STEPS = [0, 10, 24, 46, 78, 122, 180, 255, 350, 470, 620];
 
+
 export function monsterFor(rng, depth) {
   const pool = [];
   for (const key in MONSTERS) {
@@ -58,6 +59,7 @@ export function monsterFor(rng, depth) {
   return rng.weighted(pool);
 }
 
+
 export function lootFor(rng, depth) {
   const pool = [];
   for (const key in CONSUMABLES) pool.push([{ type: 'use', id: key }, CONSUMABLES[key].weight]);
@@ -69,6 +71,7 @@ export function lootFor(rng, depth) {
   if (parts.length) pool.push([{ type: 'part', id: rng.pick(parts).id }, 7]);
   return rng.weighted(pool);
 }
+
 
 export function itemLook(item) {
   if (item.type === 'use') return CONSUMABLES[item.id];

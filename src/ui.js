@@ -3,6 +3,7 @@ import { Game } from './game.js';
 
 const $ = id => document.getElementById(id);
 
+
 export class UI {
   constructor() {
     this.el = {
@@ -128,5 +129,6 @@ export class UI {
   }
 
   showHelp(show) { this.el.veilHelp.hidden = !show; }
+
   get helpOpen() { return !this.el.veilHelp.hidden; }
 }
