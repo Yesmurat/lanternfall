@@ -113,6 +113,21 @@ src/rng.js        seeded random          src/ui.js          HUD, log, overlays
 Runs are seeded: type a seed on the title screen to replay the same dungeon, or read the seed off the
 masthead to share one.
 
+## Testing
+
+`tools/sim.mjs` plays the game headlessly — no browser, no renderer, nothing random beyond the
+seeded RNG — so two builds can be compared exactly. A change meant to preserve behaviour must
+produce identical output:
+
+```bash
+git worktree add /tmp/base main
+BASE=/tmp/base node tools/sim.mjs > before.txt
+node tools/sim.mjs > after.txt && diff before.txt after.txt
+```
+
+That is the check that proved the co-op rewrite left single-player untouched, and it has caught
+two real bugs that reading the diff did not.
+
 ## Balance
 
 Tuned against a headless simulation that plays the game with no renderer (60–70 runs per pass). A bot
