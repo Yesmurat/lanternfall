@@ -54,7 +54,8 @@ The game is static files. `node build.mjs` writes a self-contained `dist/` that 
 - build command: `node build.mjs`
 - output directory: `dist`
 
-**itch.io** — build the bundle, then upload it:
+**itch.io** — see [ITCH.md](ITCH.md) for the full page kit: which image goes in which field, the
+settings, and ready-to-paste page copy. Build the bundle, then upload it:
 
 ```bash
 node build.mjs && (cd dist && zip -qr ../lanternfall-itch.zip .)
@@ -70,6 +71,13 @@ itch.io needs `index.html` at the root of the zip, which is how the bundle is la
 small CSS reset when it publishes. Off-platform that scaffolding has to be in the file, so `build.mjs`
 adds it — plus a favicon, Open Graph tags and `.nojekyll` — and copies `src/` beside it. The game code
 itself is untouched.
+
+## Art
+
+`art/` holds a bestiary sheet, an itch.io cover and transparent cut-outs of all eleven creatures plus
+the lantern-bearer. None of it is hand-drawn: `tools/record-art.mjs` records the canvas calls the game
+actually makes, and `tools/render-art.py` replays them into Cairo, so the page art and the in-game art
+cannot drift apart. Regenerate with those two commands after changing any drawing code.
 
 ## Layout
 
