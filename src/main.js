@@ -291,12 +291,9 @@ ui.el.seed.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); startRun(ui.el.seed.value); }
 });
 
-if (!HAS_RELAY) {
-  ui.el.btnHost.disabled = true;
-  ui.el.btnJoin.disabled = true;
-  ui.el.joinCode.disabled = true;
-  ui.setNet('Co-op needs a relay: deploy <b>server/</b> and set RELAY_URL in src/net-config.js.');
-}
+// Without a relay there is no co-op to offer, so the title screen simply does
+// not mention it. Setting RELAY_URL in src/net-config.js brings the row back.
+if (!HAS_RELAY) ui.el.coopBox.hidden = true;
 
 // ---------------------------------------------------------------- input
 

@@ -18,7 +18,7 @@ export class UI {
       tDepth: $('t-depth'), tKills: $('t-kills'), tTurns: $('t-turns'), tLevel: $('t-level'),
       bestLine: $('best-line'), overBest: $('over-best'),
       resume: $('btn-resume'), seed: $('seed'), sound: $('btn-sound'),
-      netStatus: $('net-status'), joinCode: $('join-code'),
+      netStatus: $('net-status'), joinCode: $('join-code'), coopBox: $('coop-box'),
       btnHost: $('btn-host'), btnJoin: $('btn-join'),
       waiting: $('waiting'), partner: $('partner'),
       pnName: $('pn-name'), pnDot: $('pn-dot'), pnHp: $('pn-hp'), pnHpBar: $('pn-hp-bar'),
