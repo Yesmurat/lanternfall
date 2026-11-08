@@ -1,5 +1,7 @@
 # Lanternfall
 
+**[Play it](https://yesmurat.github.io/lanternfall)**
+
 A turn-based roguelike in eight procedurally generated depths, where **the oil in your lantern is your field of view**.
 
 Every step burns a unit of oil. As the oil drops the circle of light closes in around you, until you are
@@ -29,10 +31,15 @@ Walk into a creature to attack it. On a touch screen a directional pad appears b
 ES modules will not load over `file://`, so the page needs a server — any server will do:
 
 ```bash
-npm run serve      # builds dist/ and serves it at http://localhost:8000
+python3 -m http.server 8000      # then open http://localhost:8000
 ```
 
-Or point your own server at the repository root; `index.html` and `src/` work as they are.
+That serves the repository root, where `index.html` and `src/` work as they are. To check the built
+version instead, run `node build.mjs` first and serve `dist/`.
+
+Only Node is needed for the build; there are no dependencies to install. The `scripts` in
+`package.json` are conveniences for anyone who has npm — every one of them is a plain command you can
+run directly.
 
 ## Deploying
 
@@ -47,9 +54,15 @@ The game is static files. `node build.mjs` writes a self-contained `dist/` that 
 - build command: `node build.mjs`
 - output directory: `dist`
 
-**itch.io** — `npm run itch` writes `lanternfall-itch.zip`. Create a new project, set *Kind of project*
-to **HTML**, upload the zip, tick *This file will be played in the browser*, and set the viewport to
-around 1280×800 with fullscreen enabled.
+**itch.io** — build the bundle, then upload it:
+
+```bash
+node build.mjs && (cd dist && zip -qr ../lanternfall-itch.zip .)
+```
+
+Create a new project, set *Kind of project* to **HTML**, upload `lanternfall-itch.zip`, tick *This file
+will be played in the browser*, and set the viewport to around 1280×800 with fullscreen enabled.
+itch.io needs `index.html` at the root of the zip, which is how the bundle is laid out.
 
 ## Why there is a build step
 
