@@ -18,6 +18,11 @@ export class UI {
       tDepth: $('t-depth'), tKills: $('t-kills'), tTurns: $('t-turns'), tLevel: $('t-level'),
       bestLine: $('best-line'), overBest: $('over-best'),
       resume: $('btn-resume'), seed: $('seed'), sound: $('btn-sound'),
+      netStatus: $('net-status'), joinCode: $('join-code'), coopBox: $('coop-box'),
+      btnHost: $('btn-host'), btnJoin: $('btn-join'),
+      waiting: $('waiting'), partner: $('partner'),
+      pnName: $('pn-name'), pnDot: $('pn-dot'), pnHp: $('pn-hp'), pnHpBar: $('pn-hp-bar'),
+      pnFuel: $('pn-fuel'), pnFuelBar: $('pn-fuel-bar'), pnNote: $('pn-note'),
     };
     this.onUse = () => {};
     this.lastInvKey = '';
@@ -68,11 +73,57 @@ export class UI {
     const name = DEPTH_NAMES[Math.min(game.depth, DEPTH_NAMES.length - 1)] || 'the deep dark';
     this.el.runTag.textContent = `depth ${game.depth} · ${name} · seed ${game.seedText} · turn ${game.turns}`;
 
+    this.refreshPartner(game);
+
     const key = game.inv.map(s => s.id + s.count).join('|');
     if (key !== this.lastInvKey) {
       this.lastInvKey = key;
       this.renderInv(game);
     }
+  }
+
+  refreshPartner(game) {
+    const mate = game.players.find(q => q !== game.player);
+    if (!game.coop || !mate) {
+      this.el.partner.hidden = true;
+      this.el.waiting.hidden = true;
+      return;
+    }
+    this.el.partner.hidden = false;
+    this.el.pnName.textContent = mate.name;
+    this.el.pnHp.textContent = `${Math.max(0, mate.hp)} / ${mate.maxHp}`;
+    this.el.pnHpBar.style.width = (Math.max(0, mate.hp) / mate.maxHp * 100).toFixed(1) + '%';
+    const fuel = Math.max(0, mate.fuel) / mate.maxFuel;
+    this.el.pnFuel.textContent = `${Math.round(fuel * 100)}% \u00b7 light ${game.lightRadius(mate)}`;
+    this.el.pnFuelBar.style.width = (fuel * 100).toFixed(1) + '%';
+
+    const dot = this.el.pnDot;
+    dot.className = mate.dead || mate.absent ? 'gone' : (mate.downed ? 'down' : '');
+    this.el.partner.classList.toggle('is-down', !!mate.downed);
+    this.el.pnNote.textContent = mate.absent ? 'disconnected'
+      : mate.dead ? 'gone'
+        : mate.downed ? `bleeding out \u2014 ${mate.bleed} turns` : '';
+
+    // whose move it is
+    const pending = game.waitingFor() || [];
+    const others = pending.filter(q => q !== game.player);
+    if (game.screen !== 'play') this.el.waiting.hidden = true;
+    else if (mate.downed && !mate.dead) {
+      this.el.waiting.hidden = false;
+      this.el.waiting.className = 'banner bad';
+      this.el.waiting.textContent = `${mate.name} is down \u2014 ${mate.bleed} turns`;
+    } else if (others.length) {
+      this.el.waiting.hidden = false;
+      this.el.waiting.className = 'banner';
+      this.el.waiting.textContent = `waiting for ${others.map(q => q.name).join(' and ')}`;
+    } else {
+      this.el.waiting.hidden = true;
+    }
+  }
+
+  setNet(text, tone = '') {
+    this.el.netStatus.innerHTML = text || '';
+    this.el.netStatus.className = 'net-status' + (tone ? ' ' + tone : '');
   }
 
   renderInv(game) {
@@ -122,7 +173,7 @@ export class UI {
       this.el.tDepth.textContent = game.depth;
       this.el.tKills.textContent = game.kills;
       this.el.tTurns.textContent = game.turns;
-      this.el.tLevel.textContent = game.player.level;
+      this.el.tLevel.textContent = game.players.map(q => q.level).join(' / ');
       const best = Game.best();
       this.el.overBest.innerHTML = best ? `deepest descent so far <b>${best.depth}</b>` : '';
     }

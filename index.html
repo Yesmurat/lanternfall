@@ -140,6 +140,34 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   .rail{overflow:visible}
   .log-card{min-height:148px;max-height:220px}
 }
+/* co-op */
+.coop{margin-top:16px;padding-top:14px;border-top:1px solid var(--edge-soft)}
+.coop-row{display:flex;gap:7px;justify-content:center;align-items:center;flex-wrap:wrap}
+.coop-or{font-family:var(--mono);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-faint)}
+.coop-row input{font-family:var(--mono);font-size:.76rem;background:#070a10;border:1px solid var(--edge);color:var(--bone);
+  padding:8px 10px;width:122px;border-radius:2px;text-transform:uppercase}
+.net-status{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;color:var(--bone-faint);
+  margin:12px auto 0;min-height:1.2em;max-width:42ch;text-transform:none}
+.net-status.warn{color:var(--flame)}
+.net-status.bad{color:var(--blood)}
+.net-status b{color:var(--flame-hot);font-size:1.1rem;letter-spacing:.24em;display:inline-block;margin-left:.3em}
+
+.banner{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:4;
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;
+  background:rgba(8,11,17,.86);border:1px solid var(--edge);color:var(--flame);
+  padding:7px 14px;border-radius:2px;white-space:nowrap;pointer-events:none}
+.banner[hidden]{display:none!important}
+.banner.bad{color:var(--blood);border-color:#5a2a24}
+
+.partner h2{display:flex;align-items:center;gap:7px;color:var(--bone-dim)}
+.partner h2 i{width:7px;height:7px;border-radius:50%;background:var(--verdigris);display:inline-block}
+.partner h2 i.down{background:var(--blood)}
+.partner h2 i.gone{background:var(--bone-faint)}
+.partner #pn-hp-bar{background:linear-gradient(90deg,#8d2c22,var(--blood))}
+.partner #pn-fuel-bar{background:linear-gradient(90deg,#8a5410,var(--flame))}
+.partner.is-down{border-color:#5a2a24}
+.pn-note{font-size:.88rem;color:var(--blood);margin:2px 0 0;min-height:1em}
+
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 
@@ -158,6 +186,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   <div class="board">
     <div class="stage">
       <canvas id="map"></canvas>
+      <div class="banner" id="waiting" hidden></div>
 
       <div class="veil" id="veil-title">
         <div class="sheet">
@@ -172,6 +201,15 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
           <div class="cta">
             <button class="btn" id="btn-new">Light the lantern</button>
             <button class="btn ghost" id="btn-resume" hidden>Resume descent</button>
+          </div>
+          <div class="coop" id="coop-box">
+            <div class="coop-row">
+              <button class="tool" id="btn-host">Host co-op</button>
+              <span class="coop-or">or</span>
+              <input id="join-code" type="text" placeholder="room code" maxlength="12" autocomplete="off" spellcheck="false">
+              <button class="tool" id="btn-join">Join</button>
+            </div>
+            <p class="net-status" id="net-status"></p>
           </div>
           <p class="best" id="best-line"></p>
         </div>
@@ -206,8 +244,13 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
             <div><kbd>space</kbd><span>wait a turn</span></div>
             <div><kbd>&gt;</kbd><span>take the stairs down</span></div>
             <div><kbd>1</kbd>&ndash;<kbd>9</kbd><span>use from the satchel</span></div>
+            <div><kbd>R</kbd><span>lift a fallen partner</span></div>
             <div><kbd>?</kbd><span>this page</span></div>
           </div>
+          <p>In co-op the dungeon waits until you have both moved. You share what either
+          lantern lights, the stairs need the pair of you, and a partner who falls has
+          fifteen turns before the dark keeps them &mdash; stand beside them and press
+          <kbd>R</kbd>.</p>
           <div class="legend">
             <div><b style="color:#8c4636">●</b>you, hooded, lamp in hand</div>
             <div><b style="color:#f0a93c">!</b>flask</div>
@@ -240,6 +283,14 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
         <div class="row"><span class="k">experience</span><span class="v" id="xp-text">0 / 12</span></div>
         <div class="bar thin"><i id="xp-bar"></i></div>
         <div class="gear" id="gear"></div>
+      </div>
+      <div class="card partner" id="partner" hidden>
+        <h2><span id="pn-name">partner</span> <i id="pn-dot"></i></h2>
+        <div class="row"><span class="k">health</span><span class="v" id="pn-hp">28 / 28</span></div>
+        <div class="bar"><i id="pn-hp-bar"></i></div>
+        <div class="row"><span class="k">lantern</span><span class="v" id="pn-fuel">100%</span></div>
+        <div class="bar"><i id="pn-fuel-bar"></i></div>
+        <p class="pn-note" id="pn-note"></p>
       </div>
       <div class="card">
         <h2>satchel</h2>

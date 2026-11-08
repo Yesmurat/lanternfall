@@ -26,6 +26,25 @@ Canvas 2D API and every sound is synthesised with the Web Audio API at runtime.
 
 Walk into a creature to attack it. On a touch screen a directional pad appears below the map.
 
+## Co-op
+
+Two players, online, sharing one dungeon. One browser runs the simulation and the other sends
+its moves and renders what it is told, so the two can never disagree about the world.
+
+On the title screen, one of you presses **Host co-op** and sends the room code; the other types it
+in and presses **Join**. Joining an empty room makes you the host instead, so the order does not
+matter.
+
+- The floor waits until you have both chosen a move
+- You see whatever either lantern reaches, and each tile is lit by the brighter of the two
+- Monsters pick whoever is nearest and stay on them
+- Fall and you are *downed*, not dead: fifteen turns to be lifted with `R`. Both down ends the run
+- The stairs need the pair of you standing together, and nobody leaves a partner bleeding
+- Two lanterns burn twice the oil, so the floors carry twice the flasks and 1.6x the monsters
+
+Co-op needs the relay in [`server/`](server/README.md) deployed, and `RELAY_URL` set in
+`src/net-config.js`. Without it the game is single-player and the co-op buttons say so.
+
 ## Running it locally
 
 ES modules will not load over `file://`, so the page needs a server — any server will do:

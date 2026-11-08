@@ -35,8 +35,6 @@ export class Renderer {
     this.cam = { x: 0, y: 0 };
     this.time = 0;
     this.started = false;
-    this.heroPhase = 0;
-    this.heroFacing = 1;
   }
 
   resize() {
@@ -87,7 +85,22 @@ export class Renderer {
     ctx.translate(Math.round(-this.cam.x * this.tile + shx), Math.round(-this.cam.y * this.tile + shy));
 
     const flicker = 1 + Math.sin(this.time * 7.1) * 0.055 + Math.sin(this.time * 17.7) * 0.03;
-    const radius = game.lightRadius() * flicker;
+    // every bearer throws their own light; a tile takes the brighter of them
+    const lamps = game.players.map((pl, slot) => ({
+      alive: !pl.dead && !pl.absent,
+      radius: game.lightRadius(pl) * flicker,
+      dist: game.distBy && game.distBy[slot],
+    })).filter(l => l.alive && l.dist);
+    const lanternAt = i => {
+      let best = 0;
+      for (const l of lamps) {
+        const d = l.dist[i];
+        if (d > 900) continue;
+        const v = 1 - Math.pow(Math.min(1, d / (l.radius + 0.7)), 1.5);
+        if (v > best) best = v;
+      }
+      return best < 0 ? 0 : best;
+    };
     const t = this.tile;
     const glyphSize = Math.round(t * 0.82);
 
@@ -114,8 +127,7 @@ export class Renderer {
         const px = x * t, py = y * t;
         let lant = 0, lit = 0;
         if (visible) {
-          const d = game.dist[i];
-          lant = Math.max(0, 1 - Math.pow(Math.min(1, d / (radius + 0.7)), 1.5));
+          lant = lanternAt(i);
           lit = Math.max(lant, game.map.light[i] * 0.95);
           lit = Math.max(0.14, Math.min(1, lit));
         }
@@ -177,8 +189,7 @@ export class Renderer {
       const i = item.y * game.map.w + item.x;
       if (game.vis[i] !== 1) continue;
       const look = itemLook(item);
-      const d = game.dist[i];
-      const lant = Math.max(0, 1 - Math.pow(Math.min(1, d / (radius + 0.7)), 1.5));
+      const lant = lanternAt(i);
       const lit = Math.max(0.42, Math.max(lant, game.map.light[i]));
       const bob = Math.sin(this.time * 3 + item.x * 1.7 + item.y) * 1.4;
       ctx.save();
@@ -196,9 +207,7 @@ export class Renderer {
       if (e.hp <= 0 || !game.canSeeEntity(e)) continue;
       const def = MONSTERS[e.key];
       const i = e.y * game.map.w + e.x;
-      const d = game.dist[i];
-      const lant = Math.max(0, 1 - Math.pow(Math.min(1, d / (radius + 0.7)), 1.5));
-      const seenAmt = Math.max(0.5, Math.max(lant, game.map.light[i]));
+      const seenAmt = Math.max(0.5, Math.max(lanternAt(i), game.map.light[i]));
 
       // each creature keeps its own gait, and turns to watch you when it is still
       if (e.ph === undefined) e.ph = Math.random() * Math.PI * 2;
@@ -231,34 +240,68 @@ export class Renderer {
       }
     }
 
-    // which way he faces, and how hard he is walking, read off the tween
-    const travelX = p.x - p.ax, travelY = p.y - p.ay;
-    const moving = Math.hypot(travelX, travelY);
-    if (Math.abs(travelX) > 0.04) this.heroFacing = travelX > 0 ? 1 : -1;
-    else if (p.lunge > 0 && p.lungeDir[0] !== 0) this.heroFacing = p.lungeDir[0];
-    this.heroPhase += dt * (moving > 0.03 ? 13 : 2.4);
+    // the bearers, your own drawn last so it is never hidden behind a partner
+    const order = game.players
+      .map((pl, slot) => ({ pl, slot }))
+      .filter(o => !o.pl.dead && !o.pl.absent)
+      .sort((a, b) => (a.slot === game.localIndex ? 1 : 0) - (b.slot === game.localIndex ? 1 : 0));
 
-    const plunge = p.lunge > 0
-      ? [p.lungeDir[0] * Math.sin(p.lunge * Math.PI) * 0.4, p.lungeDir[1] * Math.sin(p.lunge * Math.PI) * 0.4]
-      : [0, 0];
-    const hx = (p.ax + plunge[0]) * t + t / 2;
-    const hy = (p.ay + plunge[1]) * t + t / 2;
-    const lit = p.fuel > 0;
-    const lamp = this.lampAt(hx, hy, t, moving);
+    for (const { pl } of order) {
+      const tx = pl.x - pl.ax, ty = pl.y - pl.ay;
+      const moving = Math.hypot(tx, ty);
+      if (Math.abs(tx) > 0.04) pl.face = tx > 0 ? 1 : -1;
+      else if (pl.lunge > 0 && pl.lungeDir[0] !== 0) pl.face = pl.lungeDir[0];
+      if (!pl.face) pl.face = 1;
+      pl.phase = (pl.phase || 0) + dt * (moving > 0.03 ? 13 : 2.4);
 
-    // the pool of light, thrown from the lamp in his hand rather than from the tile
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    const reach = Math.max(t, radius * t * 1.05);
-    const glow = ctx.createRadialGradient(lamp.x, lamp.y, 0, lamp.x, lamp.y, reach);
-    glow.addColorStop(0, lit ? 'rgba(255,206,130,.30)' : 'rgba(150,170,210,.10)');
-    glow.addColorStop(0.45, lit ? 'rgba(240,169,60,.12)' : 'rgba(120,140,190,.05)');
-    glow.addColorStop(1, 'rgba(240,169,60,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(lamp.x - reach * 1.15, lamp.y - reach * 1.15, reach * 2.3, reach * 2.3);
-    ctx.restore();
+      const plunge = pl.lunge > 0
+        ? [pl.lungeDir[0] * Math.sin(pl.lunge * Math.PI) * 0.4, pl.lungeDir[1] * Math.sin(pl.lunge * Math.PI) * 0.4]
+        : [0, 0];
+      const hx = (pl.ax + plunge[0]) * t + t / 2;
+      const hy = (pl.ay + plunge[1]) * t + t / 2;
+      const lit = pl.fuel > 0 && !pl.downed;
+      const lamp = this.lampAt(pl, hx, hy, t, moving);
+      const rad = game.lightRadius(pl) * flicker;
 
-    this.drawHero(hx, hy, t, moving, lit, lamp);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const reach = Math.max(t, rad * t * 1.05);
+      const glow = ctx.createRadialGradient(lamp.x, lamp.y, 0, lamp.x, lamp.y, reach);
+      glow.addColorStop(0, lit ? 'rgba(255,206,130,.30)' : 'rgba(150,170,210,.10)');
+      glow.addColorStop(0.45, lit ? 'rgba(240,169,60,.12)' : 'rgba(120,140,190,.05)');
+      glow.addColorStop(1, 'rgba(240,169,60,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(lamp.x - reach * 1.15, lamp.y - reach * 1.15, reach * 2.3, reach * 2.3);
+      ctx.restore();
+
+      if (pl.downed) {
+        const footY = hy + t * 0.44;
+        ctx.save();
+        ctx.translate(hx, footY);
+        ctx.rotate(pl.face * 1.35);
+        ctx.translate(-hx, -footY);
+        this.drawHero(pl, hx, hy, t, 0, false, lamp);
+        ctx.restore();
+        const pulse = 0.35 + 0.3 * Math.sin(this.time * 5);
+        ctx.fillStyle = `rgba(224,90,69,${pulse})`;
+        ctx.beginPath();
+        ctx.arc(hx, hy + t * 0.2, t * 0.17, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        this.drawHero(pl, hx, hy, t, moving, lit, lamp);
+      }
+
+      if (game.coop) {
+        ctx.save();
+        ctx.font = `600 ${Math.max(8, Math.round(t * 0.42))}px "IBM Plex Mono", monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = pl.downed ? '#e05a45' : (pl === game.player ? '#ffdfa0' : pl.cloak);
+        ctx.shadowColor = 'rgba(0,0,0,.9)';
+        ctx.shadowBlur = 4;
+        ctx.fillText(pl.name, hx, hy - t * 0.92);
+        ctx.restore();
+      }
+    }
 
     // tracers, particles, numbers
     for (const tr of fx.tracers) {
@@ -312,6 +355,41 @@ export class Renderer {
       ctx.fillStyle = `rgba(224,90,69,${pulse * (1 - ratio / 0.14)})`;
       ctx.fillRect(0, 0, this.cssW, this.cssH);
     }
+    // where your partner is, when they are off the edge of the screen
+    if (game.coop) {
+      for (const pl of game.players) {
+        if (pl === game.player || pl.dead || pl.absent) continue;
+        const sx = (pl.ax - this.cam.x) * t + t / 2;
+        const sy = (pl.ay - this.cam.y) * t + t / 2;
+        if (sx > 14 && sx < this.cssW - 14 && sy > 14 && sy < this.cssH - 14) continue;
+        const cx = this.cssW / 2, cy = this.cssH / 2;
+        let dx = sx - cx, dy = sy - cy;
+        const len = Math.hypot(dx, dy) || 1;
+        dx /= len; dy /= len;
+        const m = 30;
+        const ex = Math.max(m, Math.min(this.cssW - m, cx + dx * (this.cssW / 2 - m)));
+        const ey = Math.max(m, Math.min(this.cssH - m, cy + dy * (this.cssH / 2 - m)));
+        ctx.save();
+        ctx.translate(ex, ey);
+        ctx.rotate(Math.atan2(dy, dx));
+        ctx.fillStyle = pl.downed ? '#e05a45' : pl.cloak;
+        ctx.beginPath();
+        ctx.moveTo(12, 0);
+        ctx.lineTo(-8, 8);
+        ctx.lineTo(-3, 0);
+        ctx.lineTo(-8, -8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+        ctx.fillStyle = pl.downed ? '#e05a45' : '#98907e';
+        ctx.font = '600 10px "IBM Plex Mono", ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(pl.downed ? `${pl.name} DOWN` : pl.name, ex, ey + 21);
+        ctx.restore();
+      }
+    }
+
     if (fx.flash > 0.004) {
       ctx.fillStyle = `rgba(${fx.flashColor},${fx.flash})`;
       ctx.fillRect(0, 0, this.cssW, this.cssH);
@@ -319,24 +397,24 @@ export class Renderer {
   }
 
   // where the lamp hangs this frame; the light and the hand both use it
-  lampAt(hx, hy, t, moving) {
-    const f = this.heroFacing || 1;
+  lampAt(p, hx, hy, t, moving) {
+    const f = p.face || 1;
     const h = t * 1.18, w = t * 0.64;
-    const swing = Math.sin(this.heroPhase) * (moving > 0.03 ? 1 : 0.4);
+    const swing = Math.sin(p.phase || 0) * (moving > 0.03 ? 1 : 0.4);
     const feetY = hy + t * 0.44;
     return {
       x: hx + f * (w * 0.60 + swing * w * 0.09),
-      y: feetY - h * 0.47 + Math.cos(this.heroPhase * 2) * h * 0.018,
+      y: feetY - h * 0.47 + Math.cos((p.phase || 0) * 2) * h * 0.018,
     };
   }
 
   // a hooded figure with a lamp, drawn rather than lettered
-  drawHero(hx, hy, t, moving, lit, lamp) {
+  drawHero(p, hx, hy, t, moving, lit, lamp) {
     const ctx = this.ctx;
-    const f = this.heroFacing || 1;
+    const f = p.face || 1;
     const h = t * 1.18, w = t * 0.64;
     const walking = moving > 0.03;
-    const ph = this.heroPhase;
+    const ph = p.phase || 0;
     const bob = walking ? Math.abs(Math.sin(ph)) * h * 0.04 : Math.sin(ph) * h * 0.012;
     const feetY = hy + t * 0.44 - bob;
     const topY = feetY - h;
@@ -344,8 +422,8 @@ export class Renderer {
     const headR = w * 0.35;
     const shoulderY = topY + headR * 1.75;
 
-    const CLOAK = '#8c4636';
-    const CLOAK_DARK = '#4b231b';
+    const CLOAK = p.cloak || '#8c4636';
+    const CLOAK_DARK = p.cloakDark || '#4b231b';
     const HOOD_DARK = '#1d1016';
     const RIM = lit ? 'rgba(255,206,140,.5)' : 'rgba(150,172,210,.32)';
 
