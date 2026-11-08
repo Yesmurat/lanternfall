@@ -583,7 +583,7 @@ export class Game {
       this.sfx.play('quaff');
       this.fx.float(p.x + 0.5, p.y - 0.5, '+' + gain, '#64c0a2');
       this.fx.burst(p.x + 0.5, p.y + 0.5, '100,192,162', 18, { speed: 3, gravity: -1.2, life: 0.7 });
-      this.log(`You drink. Warmth, and ${gain} vigour back.`, 'good');
+      this.log(`You drink. Warmth, and ${gain} health back.`, 'good');
     } else if (slot.id === 'ember') {
       const targets = this.entities
         .filter(e => e.hp > 0 && this.isVisible(e.x, e.y))
