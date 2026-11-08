@@ -1,0 +1,12 @@
+{
+  "name": "lanternfall",
+  "private": true,
+  "type": "module",
+  "description": "Lanternfall - a turn-based roguelike where your lantern oil is your field of view.",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "node build.mjs",
+    "serve": "node build.mjs && cd dist && python3 -m http.server 8000",
+    "itch": "node build.mjs && cd dist && zip -qr ../lanternfall-itch.zip . && echo \"wrote lanternfall-itch.zip\""
+  }
+}

@@ -1,0 +1,270 @@
+<title>Lanternfall</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: full-height dungeon stage with a narrow chronicle rail at the right; the rail drops beneath the map under 900px. */
+:root{
+  --ink:#07090e; --pit:#0a0e16; --card:#111621; --edge:#242c3c; --edge-soft:#1a202c;
+  --bone:#eae2d1; --bone-dim:#98907e; --bone-faint:#5c6476;
+  --flame:#f0a93c; --flame-hot:#ffdfa0; --blood:#e05a45; --verdigris:#64c0a2; --violet:#9d8adb;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --display:"Cinzel","Times New Roman",serif;
+  --prose:"EB Garamond",Georgia,serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:var(--bone);font-family:var(--prose);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--ink);z-index:20}
+.wrap{height:100%;display:flex;flex-direction:column;gap:10px;max-width:1340px;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
+
+/* masthead */
+.masthead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--edge-soft);padding-bottom:8px}
+.sigil{font-family:var(--display);font-weight:700;font-size:1.32rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--flame-hot);text-shadow:0 0 18px rgba(240,169,60,.3)}
+.tag{font-family:var(--mono);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-faint)}
+.masthead .spacer{flex:1}
+.tools{display:flex;gap:6px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.tool{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);
+  border:1px solid var(--edge);border-radius:2px;padding:5px 9px;transition:color .15s,border-color .15s,background .15s}
+.tool:hover{color:var(--flame);border-color:var(--flame)}
+.tool[aria-pressed="true"]{color:var(--bone-faint);border-color:var(--edge-soft)}
+:focus-visible{outline:2px solid var(--flame);outline-offset:2px}
+
+/* body grid */
+.board{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:12px}
+.stage{position:relative;min-width:0;min-height:0;background:var(--pit);border:1px solid var(--edge);
+  box-shadow:inset 0 0 90px rgba(0,0,0,.85)}
+#map{display:block;width:100%;height:100%}
+
+/* right rail */
+.rail{display:flex;flex-direction:column;gap:10px;min-width:0;overflow:auto;scrollbar-width:thin}
+.card{background:var(--card);border:1px solid var(--edge-soft);padding:11px 12px 13px}
+.card h2{font-family:var(--mono);font-size:.64rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--bone-faint);margin:0 0 9px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase}
+.row .k{color:var(--bone-faint)}
+.row .v{color:var(--bone);font-variant-numeric:tabular-nums;font-weight:500}
+.bar{height:7px;background:#070a10;border:1px solid var(--edge-soft);margin:5px 0 11px;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;transition:width .22s ease-out}
+#hp-bar{background:linear-gradient(90deg,#8d2c22,var(--blood))}
+#fuel-bar{background:linear-gradient(90deg,#8a5410,var(--flame));box-shadow:0 0 12px rgba(240,169,60,.45)}
+#xp-bar{background:linear-gradient(90deg,#3f3a6b,var(--violet))}
+.bar.thin{height:4px;margin-bottom:9px}
+.quad{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--edge-soft);border:1px solid var(--edge-soft);margin:2px 0 10px}
+.quad div{background:var(--card);padding:7px 4px;text-align:center}
+.quad b{display:block;font-family:var(--mono);font-size:1.12rem;font-weight:600;color:var(--flame-hot);font-variant-numeric:tabular-nums;line-height:1.1}
+.quad span{font-family:var(--mono);font-size:.56rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-faint)}
+.gear{display:flex;flex-direction:column;gap:3px;font-family:var(--mono);font-size:.7rem;color:var(--bone-dim)}
+.gear span{color:var(--bone-faint);display:inline-block;width:3.2em}
+.gear b{color:var(--bone);font-weight:500}
+
+/* satchel */
+.inv{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.inv li{display:flex;align-items:center;gap:9px;padding:5px 6px;border:1px solid transparent;cursor:pointer;
+  font-family:var(--mono);font-size:.74rem;transition:background .12s,border-color .12s}
+.inv li:hover{background:#171d2a;border-color:var(--edge)}
+.inv .slot{color:var(--bone-faint);font-size:.66rem;width:1em}
+.inv .glyph{font-weight:600;width:1em;text-align:center}
+.inv .nm{flex:1;min-width:0;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv .ct{color:var(--flame);font-variant-numeric:tabular-nums}
+.inv .empty{color:var(--bone-faint);font-style:italic;font-family:var(--prose);font-size:.85rem;cursor:default;padding:2px 6px}
+.inv .empty:hover{background:none;border-color:transparent}
+
+/* chronicle */
+.log-card{flex:1;min-height:120px;display:flex;flex-direction:column}
+.log{flex:1;min-height:0;overflow-y:auto;font-size:.95rem;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin}
+.log p{margin:0;color:var(--bone-dim)}
+.log p:last-child{color:var(--bone)}
+.log .good{color:var(--verdigris)}
+.log .bad{color:var(--blood)}
+.log .warm{color:var(--flame)}
+.log .magic{color:var(--violet)}
+.log .big{font-family:var(--display);font-size:.9rem;letter-spacing:.08em;text-transform:uppercase;color:var(--flame-hot)}
+.log .turn{font-family:var(--mono);font-size:.62rem;color:var(--bone-faint);letter-spacing:.1em}
+
+/* touch pad */
+.pad{display:none;gap:4px;grid-template-columns:repeat(3,1fr);max-width:230px;margin:0 auto;width:100%}
+.pad button{aspect-ratio:1;background:#111621;border:1px solid var(--edge);color:var(--bone-dim);font-family:var(--mono);
+  font-size:1.05rem;border-radius:3px;display:grid;place-items:center}
+.pad button:active{background:#1d2534;color:var(--flame)}
+.pad .mid{font-size:.6rem;letter-spacing:.08em}
+.padrow{display:none;gap:6px;justify-content:center}
+.padrow .tool{flex:1;max-width:112px;text-align:center;padding:9px}
+@media (pointer:coarse){.pad{display:grid}.padrow{display:flex}}
+
+/* overlays */
+.veil{position:absolute;inset:0;display:grid;place-items:center;padding:20px 16px;z-index:5;
+  background:radial-gradient(circle at 50% 40%,rgba(14,10,6,.86),rgba(5,6,10,.97));backdrop-filter:blur(3px);overflow:auto}
+.veil[hidden]{display:none!important}
+.sheet{max-width:min(560px,100%);text-align:center}
+.sheet h1{font-family:var(--display);font-weight:700;font-size:clamp(2.1rem,7vw,3.3rem);letter-spacing:.1em;margin:0 0 6px;
+  text-transform:uppercase;color:var(--flame-hot);text-shadow:0 0 34px rgba(240,169,60,.42);text-wrap:balance}
+.sheet h1.small{font-size:clamp(1.5rem,5vw,2.1rem)}
+.sheet .kicker{font-family:var(--mono);font-size:.66rem;letter-spacing:.3em;text-transform:uppercase;color:var(--bone-faint);margin:0 0 20px}
+.sheet p{max-width:46ch;margin:0 auto 13px;color:var(--bone-dim)}
+.sheet p em{color:var(--flame);font-style:italic}
+.cta{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.btn{font-family:var(--mono);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;padding:11px 20px;
+  border:1px solid var(--flame);color:var(--flame);background:rgba(240,169,60,.05);transition:background .16s,color .16s}
+.btn:hover{background:var(--flame);color:#140d04}
+.btn.ghost{border-color:var(--edge);color:var(--bone-dim)}
+.btn.ghost:hover{background:#1b212e;color:var(--bone)}
+.seedbox{display:flex;gap:7px;justify-content:center;align-items:center;margin-top:18px;flex-wrap:wrap}
+.seedbox label{font-family:var(--mono);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-faint)}
+.seedbox input{font-family:var(--mono);font-size:.78rem;background:#070a10;border:1px solid var(--edge);color:var(--bone);
+  padding:8px 10px;width:150px;border-radius:2px}
+.best{font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-faint);margin-top:18px}
+.best b{color:var(--flame)}
+.tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:1px;background:var(--edge-soft);
+  border:1px solid var(--edge-soft);margin:22px 0 4px;text-align:center}
+.tally div{background:rgba(10,14,22,.8);padding:11px 6px}
+.tally b{display:block;font-family:var(--mono);font-size:1.3rem;font-weight:600;color:var(--flame-hot);font-variant-numeric:tabular-nums}
+.tally span{font-family:var(--mono);font-size:.56rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-faint)}
+.keys{text-align:left;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 22px;margin:16px 0 0}
+.keys div{display:flex;gap:10px;align-items:baseline;font-size:.92rem;color:var(--bone-dim)}
+.keys kbd{font-family:var(--mono);font-size:.68rem;background:#070a10;border:1px solid var(--edge);border-bottom-width:2px;
+  padding:2px 6px;border-radius:3px;color:var(--bone);white-space:nowrap}
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:3px 18px;text-align:left;margin-top:14px}
+.legend div{font-family:var(--mono);font-size:.72rem;color:var(--bone-dim)}
+.legend b{font-weight:600;margin-right:7px}
+
+@media (max-width:900px){
+  .wrap{height:auto;min-height:100%}
+  .board{grid-template-columns:minmax(0,1fr);flex:none}
+  .stage{height:min(58vh,440px)}
+  .rail{overflow:visible}
+  .log-card{min-height:148px;max-height:220px}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <span class="sigil">Lanternfall</span>
+    <span class="tag" id="run-tag">depth i &middot; seed &mdash;</span>
+    <span class="spacer"></span>
+    <div class="tools">
+      <button class="tool" id="btn-help" title="Keys and legend">keys</button>
+      <button class="tool" id="btn-sound" aria-pressed="false" title="Toggle sound">sound</button>
+      <button class="tool" id="btn-quit" title="Abandon this run">abandon</button>
+    </div>
+  </header>
+
+  <div class="board">
+    <div class="stage">
+      <canvas id="map"></canvas>
+
+      <div class="veil" id="veil-title">
+        <div class="sheet">
+          <h1>Lanternfall</h1>
+          <p class="kicker">a descent in eight depths</p>
+          <p>The Everflame went out, and the dark came up the stairwell. You carry the last lit lantern into the Sump.</p>
+          <p><em>Your lantern is your eyes.</em> Every step burns oil, and as the oil goes the light closes in around you. Find flasks, keep to the braziers, and reach the eighth depth before the wick runs dry.</p>
+          <div class="seedbox">
+            <label for="seed">seed</label>
+            <input id="seed" type="text" placeholder="leave blank for chance" maxlength="18" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="cta">
+            <button class="btn" id="btn-new">Light the lantern</button>
+            <button class="btn ghost" id="btn-resume" hidden>Resume descent</button>
+          </div>
+          <p class="best" id="best-line"></p>
+        </div>
+      </div>
+
+      <div class="veil" id="veil-over" hidden>
+        <div class="sheet">
+          <h1 class="small" id="over-title">The light goes out</h1>
+          <p class="kicker" id="over-kicker">snuffed on depth i</p>
+          <p id="over-body"></p>
+          <div class="tally">
+            <div><b id="t-depth">1</b><span>depth</span></div>
+            <div><b id="t-kills">0</b><span>slain</span></div>
+            <div><b id="t-turns">0</b><span>turns</span></div>
+            <div><b id="t-level">1</b><span>level</span></div>
+          </div>
+          <div class="cta">
+            <button class="btn" id="btn-again">Descend again</button>
+            <button class="btn ghost" id="btn-same">Replay this seed</button>
+          </div>
+          <p class="best" id="over-best"></p>
+        </div>
+      </div>
+
+      <div class="veil" id="veil-help" hidden>
+        <div class="sheet">
+          <h1 class="small">Keys &amp; signs</h1>
+          <p class="kicker">bump a creature to strike it</p>
+          <div class="keys">
+            <div><kbd>W A S D</kbd><span>or arrows &mdash; step</span></div>
+            <div><kbd>Q E Z C</kbd><span>step diagonally</span></div>
+            <div><kbd>space</kbd><span>wait a turn</span></div>
+            <div><kbd>&gt;</kbd><span>take the stairs down</span></div>
+            <div><kbd>1</kbd>&ndash;<kbd>9</kbd><span>use from the satchel</span></div>
+            <div><kbd>?</kbd><span>this page</span></div>
+          </div>
+          <div class="legend">
+            <div><b style="color:#8c4636">●</b>you, hooded, lamp in hand</div>
+            <div><b style="color:#f0a93c">!</b>flask</div>
+            <div><b style="color:#ef6a3c">*</b>ember</div>
+            <div><b style="color:#9d8adb">?</b>scroll</div>
+            <div><b style="color:#cfd6e4">/</b>weapon</div>
+            <div><b style="color:#cfd6e4">[</b>armour</div>
+            <div><b style="color:#64c0a2">=</b>lantern part</div>
+            <div><b style="color:#98907e">+</b>door</div>
+            <div><b style="color:#eae2d1">&gt;</b>stairs down</div>
+            <div><b style="color:#f0a93c">&#9679;</b>brazier (free light)</div>
+          </div>
+          <div class="cta"><button class="btn" id="btn-close-help">Back to the dark</button></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="rail">
+      <div class="card">
+        <div class="row"><span class="k">vigour</span><span class="v" id="hp-text">20 / 20</span></div>
+        <div class="bar"><i id="hp-bar"></i></div>
+        <div class="row"><span class="k">lantern</span><span class="v" id="fuel-text">100%</span></div>
+        <div class="bar"><i id="fuel-bar"></i></div>
+        <div class="quad">
+          <div><b id="s-depth">1</b><span>depth</span></div>
+          <div><b id="s-level">1</b><span>level</span></div>
+          <div><b id="s-power">4</b><span>strike</span></div>
+          <div><b id="s-def">0</b><span>guard</span></div>
+        </div>
+        <div class="row"><span class="k">lore</span><span class="v" id="xp-text">0 / 12</span></div>
+        <div class="bar thin"><i id="xp-bar"></i></div>
+        <div class="gear" id="gear"></div>
+      </div>
+      <div class="card">
+        <h2>satchel</h2>
+        <ul class="inv" id="inv"></ul>
+      </div>
+      <div class="card log-card">
+        <h2>chronicle</h2>
+        <div class="log" id="log"></div>
+      </div>
+      <div class="pad" id="pad">
+        <button data-dx="-1" data-dy="-1">&#8598;</button>
+        <button data-dx="0" data-dy="-1">&#8593;</button>
+        <button data-dx="1" data-dy="-1">&#8599;</button>
+        <button data-dx="-1" data-dy="0">&#8592;</button>
+        <button class="mid" data-wait="1">WAIT</button>
+        <button data-dx="1" data-dy="0">&#8594;</button>
+        <button data-dx="-1" data-dy="1">&#8601;</button>
+        <button data-dx="0" data-dy="1">&#8595;</button>
+        <button data-dx="1" data-dy="1">&#8600;</button>
+      </div>
+      <div class="padrow">
+        <button class="tool" id="btn-descend">descend &gt;</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script type="module" src="src/main.js"></script>
