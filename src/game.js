@@ -32,6 +32,8 @@ export class Game {
     this.messages = [];
     this.players = [];
     this.localIndex = 0;
+    this.tileEdits = [];      // tiles changed since the last snapshot was sent
+    this.outbox = [];         // log lines the peer has not seen yet
   }
 
   // The local player. Everything that used to say `this.player` still works,
@@ -43,9 +45,9 @@ export class Game {
   get coop() { return this.players.length > 1; }
 
   // players who can still take a turn
-  get active() { return this.players.filter(p => !p.dead && !p.downed); }
+  get active() { return this.players.filter(p => !p.dead && !p.downed && !p.absent); }
 
-  get standing() { return this.players.filter(p => !p.dead); }
+  get standing() { return this.players.filter(p => !p.dead && !p.absent); }
 
   nameOf(p) { return this.coop ? p.name : 'You'; }
 
@@ -351,7 +353,7 @@ export class Game {
     }
     const t = this.tileAt(nx, ny);
     if (t === T.DOOR) {
-      this.map.tiles[ny * this.map.w + nx] = T.OPEN;
+      this.setTile(nx, ny, T.OPEN);
       this.sfx.play('door');
       this.log('The door gives with a wet crack.', 'dim');
       return true;
@@ -629,7 +631,7 @@ export class Game {
     if (victim) { this.strike(e, victim); return; }
     const t = this.tileAt(nx, ny);
     if (t === T.DOOR) {
-      this.map.tiles[ny * this.map.w + nx] = T.OPEN;
+      this.setTile(nx, ny, T.OPEN);
       if (this.isVisible(nx, ny)) {
         this.sfx.play('door');
         this.log('A door swings open somewhere ahead.', 'dim');
@@ -868,9 +870,19 @@ export class Game {
   // ---------------------------------------------------------------- log, save
 
   log(text, cls = '') {
-    this.messages.push({ text, cls, turn: this.turns });
+    const entry = { text, cls, turn: this.turns };
+    this.messages.push(entry);
     if (this.messages.length > 120) this.messages.shift();
-    if (this.ui) this.ui.pushMessage({ text, cls, turn: this.turns });
+    this.outbox.push(entry);
+    if (this.outbox.length > 60) this.outbox.shift();
+    if (this.ui) this.ui.pushMessage(entry);
+  }
+
+  // every tile change is recorded so a tick can carry the delta, not the map
+  setTile(x, y, v) {
+    const i = y * this.map.w + x;
+    this.map.tiles[i] = v;
+    this.tileEdits.push(i, v);
   }
 
   recordBest() {
@@ -955,6 +967,112 @@ export class Game {
     this.fx.clear();
     this.recomputeFOV();
     return true;
+  }
+
+  // ---------------------------------------------------------------- co-op sync
+
+  mapPayload() {
+    return {
+      w: this.map.w, h: this.map.h, depth: this.map.depth, isFinal: this.map.isFinal,
+      tiles: Array.from(this.map.tiles),
+      light: Array.from(this.map.light, v => Math.round(v * 100) / 100),
+      rooms: this.map.rooms, start: this.map.start, stairs: this.map.stairs,
+      braziers: this.map.braziers,
+    };
+  }
+
+  // the whole floor: sent when a guest joins and on every descent
+  netLevel() {
+    this.tileEdits = [];
+    this.outbox = [];
+    return {
+      t: 'level',
+      seedText: this.seedText, depth: this.depth, turns: this.turns, kills: this.kills,
+      screen: this.screen, bossAlive: this.bossAlive, stairHinted: this.stairHinted,
+      players: this.players, entities: this.entities, items: this.items,
+      messages: this.messages.slice(-30),
+      map: this.mapPayload(),
+    };
+  }
+
+  // the mutable part only; the map travels as a handful of tile edits
+  netTick() {
+    const tick = {
+      t: 'tick',
+      turns: this.turns, kills: this.kills, screen: this.screen,
+      deathCause: this.deathCause, bossAlive: this.bossAlive, stairHinted: this.stairHinted,
+      players: this.players, entities: this.entities, items: this.items,
+      tiles: this.tileEdits, messages: this.outbox,
+    };
+    this.tileEdits = [];
+    this.outbox = [];
+    return tick;
+  }
+
+  applyLevel(d, localIndex) {
+    this.seedText = d.seedText;
+    this.depth = d.depth;
+    this.turns = d.turns;
+    this.kills = d.kills;
+    this.screen = d.screen;
+    this.bossAlive = d.bossAlive;
+    this.stairHinted = d.stairHinted;
+    this.players = d.players;
+    this.localIndex = Math.min(localIndex, this.players.length - 1);
+    this.entities = d.entities;
+    this.items = d.items;
+    this.messages = d.messages || [];
+    this.map = {
+      w: d.map.w, h: d.map.h, depth: d.map.depth, isFinal: d.map.isFinal,
+      tiles: Int8Array.from(d.map.tiles), light: Float32Array.from(d.map.light),
+      rooms: d.map.rooms, roomId: null, start: d.map.start,
+      stairs: d.map.stairs, braziers: d.map.braziers,
+    };
+    const cells = this.map.w * this.map.h;
+    this.vis = new Uint8Array(cells);
+    this.dist = new Float32Array(cells);
+    this.distBy = this.players.map(() => new Float32Array(cells));
+    this.seen = new Uint8Array(cells);
+    for (const p of this.players) { p.ax = p.x; p.ay = p.y; }
+    for (const e of this.entities) { e.ax = e.x; e.ay = e.y; }
+    this.fx.clear();
+    this.recomputeFOV();
+  }
+
+  applyTick(d) {
+    // keep the tween origins so movement still animates instead of snapping
+    const was = new Map(this.players.map(p => [p.slot, { ax: p.ax, ay: p.ay }]));
+    const wasE = new Map(this.entities.map((e, i) => [i, { ax: e.ax, ay: e.ay }]));
+    this.turns = d.turns;
+    this.kills = d.kills;
+    this.screen = d.screen;
+    this.deathCause = d.deathCause;
+    this.bossAlive = d.bossAlive;
+    this.stairHinted = d.stairHinted;
+    this.players = d.players;
+    this.entities = d.entities;
+    this.items = d.items;
+    for (let i = 0; i < (d.tiles || []).length; i += 2) this.map.tiles[d.tiles[i]] = d.tiles[i + 1];
+    for (const p of this.players) {
+      const prev = was.get(p.slot);
+      p.ax = prev ? prev.ax : p.x;
+      p.ay = prev ? prev.ay : p.y;
+    }
+    this.entities.forEach((e, i) => {
+      const prev = wasE.get(i);
+      e.ax = prev ? prev.ax : e.x;
+      e.ay = prev ? prev.ay : e.y;
+    });
+    if (this.distBy.length !== this.players.length) {
+      const cells = this.map.w * this.map.h;
+      this.distBy = this.players.map(() => new Float32Array(cells));
+    }
+    for (const m of d.messages || []) {
+      this.messages.push(m);
+      if (this.messages.length > 120) this.messages.shift();
+      if (this.ui) this.ui.pushMessage(m);
+    }
+    this.recomputeFOV();
   }
 
   save() {

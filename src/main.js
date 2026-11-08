@@ -3,18 +3,179 @@ import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { FX } from './fx.js';
 import { Sfx } from './audio.js';
+import { Net, HAS_RELAY, makeRoomCode } from './net.js';
 
 const canvas = document.getElementById('map');
 const fx = new FX();
 const sfx = new Sfx();
 const ui = new UI();
 const renderer = new Renderer(canvas);
-const game = new Game(fx, sfx, ui);
 
-ui.onUse = i => { wake(); game.act({ type: 'use', slot: i }); };
+// ---------------------------------------------------------------- co-op plumbing
+//
+// Only the host simulates. Particles and sounds are side effects of that
+// simulation, so the host records the ones it fires and ships them with the
+// tick; the guest replays them and the run looks and sounds the same on both
+// screens. The game itself knows nothing about any of this.
+
+let mode = 'solo';            // 'solo' | 'host' | 'guest'
+let recording = false;
+let lastDepth = 0;
+const recFx = [];
+const recSfx = [];
+
+const gameFx = {
+  clear: () => { fx.clear(); },
+  burst: (...a) => { fx.burst(...a); if (recording) recFx.push(['burst', ...a]); },
+  float: (...a) => { fx.float(...a); if (recording) recFx.push(['float', ...a]); },
+  tracer: (...a) => { fx.tracer(...a); if (recording) recFx.push(['tracer', ...a]); },
+  shakeBy: (...a) => { fx.shakeBy(...a); if (recording) recFx.push(['shakeBy', ...a]); },
+  flashBy: (...a) => { fx.flashBy(...a); if (recording) recFx.push(['flashBy', ...a]); },
+};
+const gameSfx = {
+  play: (...a) => { sfx.play(...a); if (recording) recSfx.push(a); },
+  ready: () => sfx.ready(),
+  setMuted: m => sfx.setMuted(m),
+};
+
+const game = new Game(gameFx, gameSfx, ui);
+
+function replayEffects(payload) {
+  for (const call of payload.fx || []) {
+    const [method, ...args] = call;
+    if (typeof fx[method] === 'function') fx[method](...args);
+  }
+  for (const args of payload.sfx || []) sfx.play(...args);
+}
+
+function broadcast() {
+  if (mode !== 'host' || !net.hasPeer) return;
+  const payload = game.depth !== lastDepth ? game.netLevel() : game.netTick();
+  lastDepth = game.depth;
+  payload.fx = recFx.splice(0);
+  payload.sfx = recSfx.splice(0);
+  net.send(payload);
+}
+
+// every action in the game funnels through here
+function submit(action) {
+  wake();
+  if (game.screen !== 'play') return;
+  if (mode === 'guest') { net.send({ t: 'intent', action }); return; }
+  game.act(action, 0);
+  broadcast();
+}
+
+const net = new Net({
+  welcome(msg) {
+    // whoever reaches an empty room first runs the game, however they got here
+    if (msg.host && mode === 'guest') {
+      mode = 'host';
+      recording = true;
+      ui.setNet(`Nobody here yet — you are hosting room <b>${net.code}</b>`, 'warn');
+    } else if (!msg.host && mode === 'host') {
+      mode = 'guest';
+      recording = false;
+      ui.setNet('Someone is already hosting that room — joining them.', 'warn');
+    }
+  },
+
+  join() {
+    if (mode !== 'host') return;
+    if (game.screen === 'play' && game.coop) {
+      const mate = game.players[1];
+      if (mate) mate.absent = false;
+      const level = game.netLevel();
+      level.fx = []; level.sfx = [];
+      net.send(level);
+      game.log('Your partner is back.', 'good');
+      ui.refresh(game);
+    } else {
+      startCoop();
+    }
+  },
+
+  leave() {
+    if (mode === 'host') {
+      const mate = game.players[1];
+      if (mate && !mate.dead) {
+        mate.absent = true;
+        mate.acted = false;
+        game.log(`${mate.name} has dropped out of the dark.`, 'bad');
+        ui.refresh(game);
+      }
+    } else if (mode === 'guest') {
+      ui.setNet('The host left. The run is over.', 'bad');
+      game.screen = 'title';
+      ui.setScreen(game);
+    }
+  },
+
+  message(msg) {
+    if (msg.t === 'intent' && mode === 'host') {
+      game.act(msg.action, 1);
+      broadcast();
+      return;
+    }
+    if (msg.t === 'level' && mode === 'guest') {
+      ui.el.log.textContent = '';
+      renderer.started = false;
+      game.applyLevel(msg, net.slot);
+      replayEffects(msg);
+      ui.redrawLog(game);
+      ui.setScreen(game);
+      ui.renderInv(game);
+      ui.refresh(game);
+      return;
+    }
+    if (msg.t === 'tick' && mode === 'guest') {
+      game.applyTick(msg);
+      replayEffects(msg);
+      ui.refresh(game);
+      if (game.screen !== 'play') ui.setScreen(game);
+    }
+  },
+
+  status(state, detail) {
+    switch (state) {
+      case 'connecting': ui.setNet('Reaching the relay…'); break;
+      case 'waiting':
+        ui.setNet(mode === 'host'
+          ? `Room code <b>${net.code}</b><br>Send it to your friend and keep this page open.`
+          : 'Connected. Waiting for the host to start…', 'warn');
+        break;
+      case 'ready': ui.setNet('Partner connected.'); break;
+      case 'full': ui.setNet('That room already has two players in it.', 'bad'); break;
+      case 'bad-code': ui.setNet('Room codes are letters and numbers only.', 'bad'); break;
+      case 'no-relay':
+        ui.setNet('No relay is configured. Deploy <b>server/</b> and set RELAY_URL in src/net-config.js.', 'bad');
+        break;
+      case 'failed':
+        ui.setNet(`Could not reach the relay${detail ? ' — ' + detail : ''}.`, 'bad');
+        break;
+      case 'closed':
+        if (mode !== 'solo') ui.setNet('Disconnected.', 'bad');
+        break;
+      default: break;
+    }
+  },
+});
+
+function startCoop() {
+  ui.el.log.textContent = '';
+  renderer.started = false;
+  game.newRun(ui.el.seed.value, { playerCount: 2, localIndex: 0 });
+  lastDepth = game.depth;
+  const level = game.netLevel();
+  level.fx = recFx.splice(0);
+  level.sfx = recSfx.splice(0);
+  net.send(level);
+  ui.setScreen(game);
+  ui.renderInv(game);
+  ui.refresh(game);
+}
 
 // ---------------------------------------------------------------- sizing
-
 
 const fit = () => renderer.resize();
 fit();
@@ -27,17 +188,16 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
 let muted = false;
 try { muted = localStorage.getItem('lanternfall.muted') === '1'; } catch (e) { /* no storage */ }
 
-
 const paintSound = () => {
   ui.el.sound.setAttribute('aria-pressed', String(muted));
   ui.el.sound.textContent = muted ? 'muted' : 'sound';
 };
 paintSound();
 
-
 function wake() {
   if (sfx.ready()) sfx.setMuted(muted);
 }
+
 ui.el.sound.addEventListener('click', () => {
   muted = !muted;
   wake();
@@ -48,24 +208,31 @@ ui.el.sound.addEventListener('click', () => {
 
 // ---------------------------------------------------------------- run control
 
-
 function startRun(seedText) {
   wake();
+  mode = 'solo';
+  recording = false;
+  net.close();
+  ui.setNet('');
   ui.el.log.textContent = '';
   renderer.started = false;
   game.newRun(seedText);
+  lastDepth = game.depth;
   ui.setScreen(game);
   ui.renderInv(game);
   ui.refresh(game);
 }
 
-
 function resumeRun() {
   const data = Game.loadSave();
   if (!data) return;
   wake();
+  mode = 'solo';
+  recording = false;
+  net.close();
   renderer.started = false;
   if (game.restore(data)) {
+    lastDepth = game.depth;
     ui.redrawLog(game);
     game.log('You pick the lantern back up where you set it down.', 'warm');
     ui.setScreen(game);
@@ -74,21 +241,62 @@ function resumeRun() {
   }
 }
 
+ui.onUse = i => submit({ type: 'use', slot: i });
+
 document.getElementById('btn-new').addEventListener('click', () => startRun(ui.el.seed.value));
 document.getElementById('btn-resume').addEventListener('click', resumeRun);
 document.getElementById('btn-again').addEventListener('click', () => startRun(''));
 document.getElementById('btn-same').addEventListener('click', () => startRun(game.seedText));
 document.getElementById('btn-help').addEventListener('click', () => ui.showHelp(!ui.helpOpen));
 document.getElementById('btn-close-help').addEventListener('click', () => ui.showHelp(false));
-document.getElementById('btn-descend').addEventListener('click', () => { wake(); game.act({ type: 'descend' }); });
+document.getElementById('btn-descend').addEventListener('click', () => submit({ type: 'descend' }));
+
 document.getElementById('btn-quit').addEventListener('click', () => {
-  if (game.screen === 'play') game.die('abandoned the descent');
-  else { game.screen = 'title'; }
+  if (mode === 'guest') {
+    net.close();
+    mode = 'solo';
+    game.screen = 'title';
+  } else if (game.screen === 'play') {
+    game.die('abandoned the descent');
+    broadcast();
+    net.close();
+    mode = 'solo';
+  } else {
+    game.screen = 'title';
+  }
   ui.setScreen(game);
 });
+
+ui.el.btnHost.addEventListener('click', () => {
+  wake();
+  mode = 'host';
+  recording = true;
+  net.connect(makeRoomCode());
+});
+
+ui.el.btnJoin.addEventListener('click', () => {
+  wake();
+  const code = (ui.el.joinCode.value || '').trim();
+  if (!code) { ui.setNet('Type the room code your friend sent you.', 'bad'); return; }
+  mode = 'guest';
+  recording = false;
+  net.connect(code);
+});
+
+ui.el.joinCode.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); ui.el.btnJoin.click(); }
+});
+
 ui.el.seed.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); startRun(ui.el.seed.value); }
 });
+
+if (!HAS_RELAY) {
+  ui.el.btnHost.disabled = true;
+  ui.el.btnJoin.disabled = true;
+  ui.el.joinCode.disabled = true;
+  ui.setNet('Co-op needs a relay: deploy <b>server/</b> and set RELAY_URL in src/net-config.js.');
+}
 
 // ---------------------------------------------------------------- input
 
@@ -111,7 +319,7 @@ window.addEventListener('keydown', ev => {
   if (game.screen !== 'play') {
     if (ev.key === 'Enter' || ev.key === ' ') {
       ev.preventDefault();
-      if (game.screen === 'title') startRun(ui.el.seed.value); else startRun('');
+      if (mode === 'solo') startRun(game.screen === 'title' ? ui.el.seed.value : '');
     }
     return;
   }
@@ -120,49 +328,44 @@ window.addEventListener('keydown', ev => {
   const key = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
   if (MOVES[key]) {
     ev.preventDefault();
-    wake();
-    game.act({ type: 'move', dx: MOVES[key][0], dy: MOVES[key][1] });
+    submit({ type: 'move', dx: MOVES[key][0], dy: MOVES[key][1] });
     return;
   }
   if (key === ' ' || key === '.' || key === '5') {
     ev.preventDefault();
-    wake();
-    game.act({ type: 'wait' });
+    submit({ type: 'wait' });
     return;
   }
+  if (key === 'r') { ev.preventDefault(); submit({ type: 'revive' }); return; }
   if (ev.key === '>' || key === 'g') {
     ev.preventDefault();
-    wake();
-    game.act({ type: 'descend' });
+    submit({ type: 'descend' });
     return;
   }
   if (key >= '1' && key <= '9') {
     ev.preventDefault();
-    wake();
-    game.act({ type: 'use', slot: Number(key) - 1 });
+    submit({ type: 'use', slot: Number(key) - 1 });
   }
 });
 
 document.getElementById('pad').addEventListener('click', ev => {
   const btn = ev.target.closest('button');
   if (!btn || game.screen !== 'play') return;
-  wake();
-  if (btn.dataset.wait) game.act({ type: 'wait' });
-  else game.act({ type: 'move', dx: Number(btn.dataset.dx), dy: Number(btn.dataset.dy) });
+  if (btn.dataset.wait) submit({ type: 'wait' });
+  else submit({ type: 'move', dx: Number(btn.dataset.dx), dy: Number(btn.dataset.dy) });
 });
 
 // ---------------------------------------------------------------- loop
 
 let last = performance.now();
 
-
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
 
-  if (game.player) {
+  if (game.players && game.players.length) {
     const k = 1 - Math.exp(-dt * 19);
-    const all = [game.player, ...(game.entities || [])];
+    const all = [...game.players, ...(game.entities || [])];
     for (const e of all) {
       e.ax += (e.x - e.ax) * k;
       e.ay += (e.y - e.ay) * k;
@@ -187,12 +390,12 @@ function frame(now) {
 
 // ---------------------------------------------------------------- boot
 
-
 function boot(data) {
   ui.setScreen(game);
   if (data && data.save) {
     try {
       if (game.restore(data.save)) {
+        lastDepth = game.depth;
         ui.redrawLog(game);
         ui.setScreen(game);
         ui.renderInv(game);
@@ -207,5 +410,5 @@ const hot = window.claude && window.claude.hot;
 if (hot && hot.ready) hot.ready(boot);
 else boot((hot && hot.data) || {});
 if (hot && hot.snapshot) {
-  hot.snapshot(() => ({ save: game.screen === 'play' ? game.serialize() : null }));
+  hot.snapshot(() => ({ save: mode === 'solo' && game.screen === 'play' ? game.serialize() : null }));
 }
