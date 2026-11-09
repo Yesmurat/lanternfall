@@ -10,18 +10,18 @@ import { readFile, writeFile, mkdir, rm, cp } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const root = path.dirname(fileURLToPath(import.meta.url));
-const dist = path.join(root, 'dist');
+const root       = path.dirname(fileURLToPath(import.meta.url));
+const dist       = path.join(root, 'dist');
 const BODY_START = '<div class="wrap">';
 
 const DESCRIPTION =
-  'A turn-based roguelike in eight procedurally generated depths, where the oil in your lantern is your field of view.';
+	'A turn-based roguelike in eight procedurally generated depths, where the oil in your lantern is your field of view.';
 
 const FAVICON = 'data:image/svg+xml,' + encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">` +
-  `<rect width="32" height="32" rx="4" fill="#07090e"/>` +
-  `<path d="M16 5c2.6 5.4 6.4 7.6 6.4 12.4a6.4 6.4 0 0 1-12.8 0c0-2.8 1.6-4.6 2.8-6.4.9 1.8 1.8 2.7 2.7 2.7.9-2.7-.9-5.4.9-8.7z" fill="#f0a93c"/>` +
-  `<ellipse cx="16" cy="19.5" rx="2.1" ry="3" fill="#fff4d2"/></svg>`
+	`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">` +
+	`<rect width="32" height="32" rx="4" fill="#07090e"/>` +
+	`<path d="M16 5c2.6 5.4 6.4 7.6 6.4 12.4a6.4 6.4 0 0 1-12.8 0c0-2.8 1.6-4.6 2.8-6.4.9 1.8 1.8 2.7 2.7 2.7.9-2.7-.9-5.4.9-8.7z" fill="#f0a93c"/>` +
+	`<ellipse cx="16" cy="19.5" rx="2.1" ry="3" fill="#fff4d2"/></svg>`
 );
 
 // the reset the artifact host injects, restated so the page renders identically
@@ -34,18 +34,24 @@ img{max-width:100%}
 `.trim();
 
 const page = await readFile(path.join(root, 'index.html'), 'utf8');
-const at = page.indexOf(BODY_START);
+const at   = page.indexOf(BODY_START);
+
 if (at === -1) {
-  throw new Error(`build: could not find "${BODY_START}" in index.html — has the markup changed?`);
+	throw new Error(`build: could not find "${BODY_START}" in index.html — has the markup changed?`);
 }
 
 const head = page.slice(0, at)
-  .replace(/^\s*<meta name="claude:viewport-fit-sides"[^>]*>\s*$/m, '')  // host-only hint
-  .trim();
+	.replace(/^\s*<meta name="claude:viewport-fit-sides"[^>]*>\s*$/m, '')  // host-only hint
+	.trim();
 const body = page.slice(at).trim();
 
-if (!/<title>/.test(head)) throw new Error('build: index.html lost its <title>');
-if (!/<script type="module"/.test(body)) throw new Error('build: index.html lost its module script');
+if (!/<title>/.test(head)) {
+	throw new Error('build: index.html lost its <title>');
+}
+
+if (!/<script type="module"/.test(body)) {
+	throw new Error('build: index.html lost its module script');
+}
 
 const html = `<!doctype html>
 <html lang="en">
