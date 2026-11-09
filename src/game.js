@@ -590,10 +590,15 @@ export class Game {
 		}
 
 		p.acted = true;
-		// your own eyes update on your own move: in co-op the world may not
-		// advance for a while yet, and you should not be blind until it does
+		// In co-op the world may not advance for a while yet, so your own move
+		// has to refresh your own eyes or you stand blind until your partner
+		// commits. Solo needs no such pass - the world advances immediately -
+		// and running one anyway would shift play: it would fall before
+		// burnOil, so sight would be cast at the wider pre-burn radius.
 
-		this.recomputeFOV();
+		if (this.coop) {
+			this.recomputeFOV();
+		}
 		// the world moves once everyone still on their feet has committed
 
 		if (this.active.every(q => q.acted)) {
