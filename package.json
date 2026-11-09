@@ -7,6 +7,11 @@
   "scripts": {
     "build": "node build.mjs",
     "serve": "node build.mjs && cd dist && python3 -m http.server 8000",
-    "itch": "node build.mjs && cd dist && zip -qr ../lanternfall-itch.zip . && echo \"wrote lanternfall-itch.zip\""
+    "itch": "node build.mjs && cd dist && zip -qr ../lanternfall-itch.zip . && echo \"wrote lanternfall-itch.zip\"",
+    "format": "node tools/format.mjs",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
   }
 }

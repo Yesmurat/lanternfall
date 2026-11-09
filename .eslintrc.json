@@ -1,0 +1,18 @@
+{
+  "root": true,
+  "env": { "browser": true, "es2022": true, "node": true },
+  "parserOptions": { "ecmaVersion": "latest", "sourceType": "module" },
+
+  // The house style, minus the parts no stock rule can express. Blank-line
+  // padding and `=` alignment are owned by tools/format.mjs, so they are
+  // deliberately absent here: `npm run lint` must pass on formatted files.
+  "rules": {
+    "indent": ["error", "tab", { "SwitchCase": 1 }],
+    "curly": ["error", "all"],
+    "brace-style": ["error", "stroustrup", { "allowSingleLine": false }],
+    "no-mixed-spaces-and-tabs": ["error", "smart-tabs"],
+    "no-trailing-spaces": ["error", { "skipBlankLines": false }],
+    "eol-last": ["error", "always"],
+    "semi": ["error", "always"]
+  }
+}

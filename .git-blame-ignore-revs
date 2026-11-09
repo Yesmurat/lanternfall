@@ -1,0 +1,6 @@
+# Revisions that only reshuffled whitespace. Tell git to look past them:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Style: apply the house format to every JS file
+2c65b6d7aac358258345ce2da2907960689d3cad
