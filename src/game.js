@@ -590,6 +590,10 @@ export class Game {
 		}
 
 		p.acted = true;
+		// your own eyes update on your own move: in co-op the world may not
+		// advance for a while yet, and you should not be blind until it does
+
+		this.recomputeFOV();
 		// the world moves once everyone still on their feet has committed
 
 		if (this.active.every(q => q.acted)) {
