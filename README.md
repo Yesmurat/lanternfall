@@ -84,6 +84,13 @@ Create a new project, set *Kind of project* to **HTML**, upload `lanternfall-itc
 will be played in the browser*, and set the viewport to around 1280×800 with fullscreen enabled.
 itch.io needs `index.html` at the root of the zip, which is how the bundle is laid out.
 
+## Support link
+
+The game is free. Set `SUPPORT_URL` in `src/support-config.js` to a pay-what-you-want or tip page
+(the itch.io page works) and a small "support the game" link appears on the title and game-over
+screens. Left empty, which is the default, no link is shown. [ITCH.md](ITCH.md) covers the pricing
+settings.
+
 ## Why there is a build step
 
 `index.html` is authored for the Claude artifact host, which supplies the `<!doctype>`, `<head>` and a
@@ -109,6 +116,9 @@ src/path.js       breadth-first chase    src/data.js        monsters, loot, dept
 src/fx.js         particles, shake       src/audio.js       synthesised sound
 src/rng.js        seeded random          src/ui.js          HUD, log, overlays
 ```
+
+`src/net-config.js` and `src/support-config.js` hold the two addresses you set yourself: the co-op relay
+and the page players are sent to if they want to pay.
 
 Runs are seeded: type a seed on the title screen to replay the same dungeon, or read the seed off the
 masthead to share one.

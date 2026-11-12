@@ -22,6 +22,17 @@ devlogs, social posts or a press kit. `hero.png` is the lantern-bearer.
 - **Genre**: Role Playing · **Tags**: `roguelike`, `turn-based`, `procedural-generation`,
   `dungeon-crawler`, `atmospheric`, `dark-fantasy`, `html5`, `singleplayer`
 
+## Pricing
+
+- **Pricing**: *$0 or donate*, with a suggested donation of **$2**. Keep the browser build free: a
+  paywall in front of a web game turns away almost everyone before they have played a turn.
+- **Payouts**: *Collected by itch.io, paid later* is the simplest mode. Complete the tax interview
+  under *Settings → Publisher → Get started*, and check that one of itch's payout methods (PayPal or
+  Payoneer) works in your country before relying on it.
+- **In-game link**: once the page exists, paste its address into `SUPPORT_URL` in
+  `src/support-config.js` and rebuild the zip. A quiet "support the game" link then appears on the
+  title and game-over screens. Left empty, the game never mentions money.
+
 ## Page text
 
 **Tagline** (the short description field):

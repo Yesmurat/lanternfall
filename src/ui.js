@@ -1,5 +1,6 @@
 import { CONSUMABLES, WEAPONS, ARMOUR, XP_STEPS, itemLook, DEPTH_NAMES } from './data.js';
 import { Game } from './game.js';
+import { SUPPORT_URL } from './support-config.js';
 
 const $ = id => document.getElementById(id);
 
@@ -27,6 +28,19 @@ export class UI {
 		};
 		this.onUse      = () => {};
 		this.lastInvKey = '';
+
+		// the support links stay out of the page until there is somewhere to send people
+
+		if (SUPPORT_URL) {
+
+			for (const id of ['support-title', 'support-over']) {
+				const p = $(id);
+
+				p.querySelector('a').href = SUPPORT_URL;
+				p.hidden                 = false;
+			}
+
+		}
 
 	}
 
