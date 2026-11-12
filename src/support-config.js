@@ -6,4 +6,4 @@
 //
 //   export const SUPPORT_URL = 'https://your-name.itch.io/lanternfall';
 
-export const SUPPORT_URL = '';
+export const SUPPORT_URL = 'https://yesmurat06.itch.io/lanternfall';
