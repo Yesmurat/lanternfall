@@ -3,6 +3,9 @@
 // no randomness beyond the seeded RNG, so two builds can be compared exactly.
 //
 //   node tools/sim.mjs                      # run against this working tree
+//   MODE=rush node tools/sim.mjs            # a player who heads straight for the stairs
+//   RUNS=200 node tools/sim.mjs             # more runs (default 70)
+//   TABLE=1 node tools/sim.mjs              # also print the player's state on reaching each floor
 //   BASE=/path/to/other/checkout node tools/sim.mjs
 //
 // Comparing the output of two runs is the check that matters: a refactor that
@@ -94,7 +97,11 @@ function step(g, goal) {
 
 }
 
-// a thorough player: sweeps the rooms, takes what is useful, then descends
+const RUSH  = process.env.MODE === 'rush';
+const GUARD = 40000;
+
+// a thorough player: sweeps the rooms, takes what is useful, then descends.
+// With MODE=rush the room sweep is skipped: loot in sight, then the stairs.
 
 function play(seed, stats) {
 
@@ -104,7 +111,7 @@ function play(seed, stats) {
 
 	let guard = 0, depthSeen = -1, queue = [], turnsAt = 0;
 
-	while (g.screen === 'play' && guard++ < 12000) {
+	while (g.screen === 'play' && guard++ < GUARD) {
 
 		const p = g.player;
 
@@ -116,7 +123,13 @@ function play(seed, stats) {
 
 			turnsAt   = g.turns;
 			depthSeen = g.depth;
-			queue     = g.map.rooms.map(r => ({ x: r.cx, y: r.cy }));
+			(stats.arrivals[g.depth] = stats.arrivals[g.depth] || []).push({
+				level: p.level, hp: p.maxHp, power: g.playerPower(p), def: g.playerDef(p),
+				fuel: Math.round(100 * p.fuel / p.maxFuel),
+				oil: (g.inv.find(s => s.id === 'oil') || { count: 0 }).count,
+				draught: (g.inv.find(s => s.id === 'draught') || { count: 0 }).count,
+			});
+			queue     = RUSH ? [] : g.map.rooms.map(r => ({ x: r.cx, y: r.cy }));
 
 		}
 
@@ -181,8 +194,20 @@ function play(seed, stats) {
 
 	}
 
-	if (guard >= 12000) {
+	if (guard >= GUARD) {
+
 		stats.stalls++;
+		stats.stalled.push(`${seed}@${g.depth}`);
+
+		if (process.env.DEBUG_STALL) {
+			const p    = g.player, q = queue[0];
+			const loot = g.items.filter(it => g.seen[it.y * g.map.w + it.x] === 1 && wants(g, it));
+
+			console.error(seed, 'depth', g.depth, 'at', p.x, p.y, 'hp', p.hp, 'queue', queue.length, q,
+				'loot', loot.slice(0, 2), 'stairs', g.map.stairs, 'tile', g.tileAt(p.x, p.y),
+				'near', g.entities.filter(e => Math.abs(e.x - p.x) < 3 && Math.abs(e.y - p.y) < 3).map(e => [e.key, e.x, e.y, e.hp]));
+		}
+
 	}
 
 	return g;
@@ -190,7 +215,7 @@ function play(seed, stats) {
 }
 
 const RUNS   = Number(process.env.RUNS || 70);
-const stats  = { perLevel: [], stalls: 0 };
+const stats  = { perLevel: [], stalls: 0, stalled: [], arrivals: {} };
 const depths = {}, causes = {};
 let wins     = 0, dry = 0, kills = 0, turns = 0;
 const levels = [];
@@ -224,8 +249,34 @@ const avg = a => (a.length ? (a.reduce((x, y) => x + y, 0) / a.length).toFixed(1
 
 console.log('ended on depth:', Object.entries(depths).sort((a, b) => a[0] - b[0])
 	.map(([k, v]) => `${k}:${v}`).join(' '));
+
+// how many runs were still alive at the end of each act of five floors
+
+const reached = d => Object.entries(depths).reduce((n, [k, v]) => n + (Number(k) > d ? v : 0), 0);
+
+console.log('cleared act:', [5, 10, 15].map((d, i) => `${'I'.repeat(i + 1)} ${reached(d)}`).join(' | '),
+	'| IV', wins, 'of', RUNS);
 console.log('wins', wins, '| dry', dry, '| stalls', stats.stalls,
 	'| avg level', avg(levels), '| kills', kills, '| turns', turns);
 console.log('turns/level', avg(stats.perLevel));
+
+if (stats.stalled.length) {
+	console.log('stalled (seed@floor):', stats.stalled.join(' '));
+}
+
 console.log('outcomes:', Object.entries(causes).sort((a, b) => b[1] - a[1])
 	.map(([k, v]) => `${k} ${v}`).join(', '));
+
+if (process.env.TABLE) {
+
+	console.log('\nfloor  runs  level  maxhp  power  guard  fuel%  oil  draughts');
+
+	for (const d of Object.keys(stats.arrivals).sort((a, b) => a - b)) {
+		const rows = stats.arrivals[d];
+		const mean = k => (rows.reduce((n, r) => n + r[k], 0) / rows.length).toFixed(1).padStart(6);
+
+		console.log(String(d).padStart(5), String(rows.length).padStart(5),
+			mean('level'), mean('hp'), mean('power'), mean('def'), mean('fuel'), mean('oil').padStart(5), mean('draught'));
+	}
+
+}

@@ -4,11 +4,10 @@ import { computeFOV, hasLine } from './fov.js';
 import { flowField, chebyshev, DX, DY } from './path.js';
 import {
 	MONSTERS, CONSUMABLES, WEAPONS, ARMOUR, PARTS, XP_STEPS,
-	monsterFor, lootFor, itemLook, DEPTH_NAMES,
+	monsterFor, lootFor, itemLook, DEPTH_NAMES, FINAL_DEPTH, BOSS_AT,
 } from './data.js';
 
 const LOS_RANGE   = 16;
-const FINAL_DEPTH = 8;
 const SAVE_KEY    = 'lanternfall.run.v1';
 const BEST_KEY    = 'lanternfall.best.v1';
 const BLEED_TURNS = 15;
@@ -184,6 +183,10 @@ export class Game {
 			this.log('Something vast exhales down here, and the cold comes with it.', 'bad');
 		}
 
+		else if (BOSS_AT[this.depth]) {
+			this.log(`Something heavy keeps the stair on this floor: ${MONSTERS[BOSS_AT[this.depth]].name}.`, 'bad');
+		}
+
 	}
 
 	populate() {
@@ -223,19 +226,23 @@ export class Game {
 
 		};
 
-		if (map.isFinal) {
+		const bossKey = BOSS_AT[this.depth];
+
+		if (bossKey) {
 			const spot = { x: map.stairs.x, y: map.stairs.y };
-			// the Snuffer stands over the dead Everflame
+			// each boss keeps its stair; the Snuffer stands over the dead Everflame
 			const near = this.freeNear(spot.x, spot.y) || { x: spot.x + 1, y: spot.y };
 
-			this.spawn('snuffer', near.x, near.y);
-			this.bossAlive = true;
+			this.spawn(bossKey, near.x, near.y);
+			this.bossAlive = !!MONSTERS[bossKey].final;
 		}
 
 		// a second lantern means a second sword, so the floor pushes back harder
 
 		const party        = this.players.length;
-		const monsterCount = Math.round((3 + this.depth * 1.5) * (1 + (party - 1) * 0.6));
+		// the floors fill up over the first act, then thicken only slowly
+		const crowd        = 3 + Math.min(this.depth, 8) * 1.5 + Math.max(0, this.depth - 8) * 0.25;
+		const monsterCount = Math.round(crowd * (1 + (party - 1) * 0.6));
 
 		for (let i = 0; i < monsterCount; i++) {
 
@@ -713,7 +720,7 @@ export class Game {
 			this.fx.flashBy(0.2 + dmg * 0.022);
 			this.sfx.play('hurt');
 
-			const name = this.def(attacker).name;
+			const name = bare(this.def(attacker).name);
 
 			this.log(this.coop
 				? `The ${name} ${crit ? 'tears into' : 'hits'} ${target.name} for ${dmg}.`
@@ -722,18 +729,18 @@ export class Game {
 			const drain = this.def(attacker).drain;
 
 			if (drain) {
-				this.drainFuel(target, drain, this.def(attacker).name);
+				this.drainFuel(target, drain, name);
 			}
 
 			if (target.hp <= 0) {
-				this.fell(target, `slain by ${indefinite(name)}`);
+				this.fell(target, `slain by ${indefinite(this.def(attacker).name)}`);
 			}
 
 		}
 
 		else {
 
-			const name = this.def(target).name;
+			const name = bare(this.def(target).name);
 
 			if (crit) {
 				this.log(`${this.verb(attacker, `strike the ${name} clean through`, `strikes the ${name} clean through`)} — ${dmg}.`, 'warm');
@@ -760,18 +767,23 @@ export class Game {
 		this.fx.burst(e.x + 0.5, e.y + 0.5, hexToRgb(def.color), 12, { speed: 4, size: 2.4 });
 		this.fx.shakeBy(def.boss ? 14 : 4);
 		this.sfx.play('kill');
-		this.log(`The ${def.name} goes down.`, 'good');
+		this.log(`The ${bare(def.name)} goes down.`, 'good');
 
-		if (def.boss) {
+		if (def.final) {
 			this.bossAlive = false;
 			this.fx.flashBy(0.5, '240,169,60');
 			this.log('The Snuffer comes apart like a blown-out candle. The cold lifts.', 'big');
 			this.log('Behind it, the Everflame guts glow faint. Step onto it.', 'warm');
 		}
+
+		else if (def.boss) {
+			this.fx.flashBy(0.35, '240,169,60');
+			this.log('The stair it kept stands open, and the floor breathes out.', 'big');
+		}
 		// the dying sometimes leave something useful
 
 		if (this.rng.chance(def.boss ? 1 : 0.22)) {
-			const drop = def.boss ? { type: 'weapon', id: 'brand' } : lootFor(this.rng, this.depth);
+			const drop = def.drop || lootFor(this.rng, this.depth);
 
 			this.items.push({ x: e.x, y: e.y, ...drop });
 		}
@@ -1010,22 +1022,24 @@ export class Game {
 
 		}
 
-		if (def.boss) {
+		const call = def.summon;
+
+		if (call) {
 
 			e.summonCd -= 1;
 
-			const brood = this.entities.filter(o => o.key === 'wick' && o.hp > 0).length;
+			const brood = this.entities.filter(o => o.key === call.key && o.hp > 0).length;
 
-			if (e.summonCd <= 0 && brood < 3) {
+			if (e.summonCd <= 0 && brood < call.max) {
 
-				e.summonCd = 6;
+				e.summonCd = call.every;
 
 				const spot = this.freeNear(e.x, e.y);
 
 				if (spot) {
-					this.spawn('wick', spot.x, spot.y).awake = true;
-					this.fx.burst(spot.x + 0.5, spot.y + 0.5, '217,162,228', 14, { speed: 4, gravity: -0.8 });
-					this.log('The Snuffer coughs out another wick-eater.', 'magic');
+					this.spawn(call.key, spot.x, spot.y).awake = true;
+					this.fx.burst(spot.x + 0.5, spot.y + 0.5, hexToRgb(MONSTERS[call.key].color), 14, { speed: 4, gravity: -0.8 });
+					this.log(call.line, 'magic');
 				}
 
 			}
@@ -1304,15 +1318,20 @@ export class Game {
 
 	// ---------------------------------------------------------------- items
 
+	// Everything lying on the tile gets its turn. A kill can drop loot on top of
+	// gear already left there, and one declined sword must not bury the flask under it.
 	collect(p, x, y) {
 
-		const idx = this.items.findIndex(it => it.x === x && it.y === y);
-
-		if (idx === -1) {
-			return;
+		for (const item of this.items.filter(it => it.x === x && it.y === y)) {
+			this.collectOne(p, item);
 		}
 
-		const item = this.items[idx];
+	}
+
+	collectOne(p, item) {
+
+		const idx  = this.items.indexOf(item);
+		const x    = item.x, y = item.y;
 		const look = itemLook(item);
 
 		// gear no better than yours stays on the floor, and says so once per person
@@ -1461,7 +1480,7 @@ export class Game {
 
 			const splash = this.entities.filter(e => e.hp > 0 && chebyshev(e.x, e.y, target.x, target.y) <= 1);
 
-			this.log(`The ember flask bursts over the ${this.def(target).name}.`, 'warm');
+			this.log(`The ember flask bursts over the ${bare(this.def(target).name)}.`, 'warm');
 
 			for (const e of splash) {
 
@@ -1589,7 +1608,7 @@ export class Game {
 	serialize() {
 
 		return {
-			v: 2, seedText: this.seedText, rng: this.rng.state, depth: this.depth,
+			v: 3, seedText: this.seedText, rng: this.rng.state, depth: this.depth,
 			turns: this.turns, kills: this.kills,
 			players: this.players, localIndex: this.localIndex,
 			entities: this.entities, items: this.items,
@@ -1613,20 +1632,9 @@ export class Game {
 			return false;
 		}
 
-		if (data.v === 1) {
-			// a save from before co-op: one player, inventory held on the game
-			const p = data.player;
+		// a run saved before the stair went twenty floors deep cannot be continued
 
-			p.slot      = 0;
-			p.name      = PLAYER_SKINS[0].name;
-			p.cloak     = PLAYER_SKINS[0].cloak;
-			p.cloakDark = PLAYER_SKINS[0].dark;
-			p.inv       = data.inv || [];
-			p.downed    = false; p.bleed = 0; p.dead = false; p.acted = false;
-			data        = { ...data, v: 2, players: [p], localIndex: 0 };
-		}
-
-		if (data.v !== 2) {
+		if (data.v !== 3) {
 			return false;
 		}
 
@@ -1874,9 +1882,21 @@ function hexToRgb(hex) {
 
 }
 
+// "a cave rat", "an ash hound", but a name that brings its own article keeps it
+
 function indefinite(word) {
 
+	if (/^the /.test(word)) {
+		return word;
+	}
+
 	return (/^[aeiou]/i.test(word) ? 'an ' : 'a ') + word;
+
+}
+
+function bare(name) {
+
+	return name.replace(/^the /, '');
 
 }
 

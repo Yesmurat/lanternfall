@@ -1,4 +1,5 @@
 import { computeFOV } from './fov.js';
+import { FINAL_DEPTH } from './data.js';
 
 export const T = {
 	ROCK: 0, FLOOR: 1, WALL: 2, DOOR: 3, OPEN: 4,
@@ -23,7 +24,7 @@ export function blocksSight(t) {
 export function generate(rng, depth) {
 
 	const w        = MAP_W, h = MAP_H;
-	const isFinal  = depth >= 8;
+	const isFinal  = depth >= FINAL_DEPTH;
 	const tiles    = new Int8Array(w * h);           // all ROCK
 	const roomId   = new Int16Array(w * h).fill(-1);
 	const rooms    = [];

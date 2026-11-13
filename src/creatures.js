@@ -596,6 +596,380 @@ const DRAW = {
 
 	},
 
+	// a wick-eater that grew up: dusty wings, and a taste for bigger lamps
+	moth(ctx, cx, cy, t, st) {
+
+		const f    = st.facing, g = cy + t * 0.44;
+		const flap = Math.sin(st.phase * 3.2);
+		const by   = g - t * 0.52 + Math.sin(st.phase * 1.1) * t * 0.05;
+		const wing = st.color, dark = shift(st.color, -0.5);
+
+		ground(ctx, cx, g, t * 0.2, t * 0.05, 0.25);
+
+		ctx.save();
+		ctx.globalAlpha *= 0.82;
+		[-1, 1].forEach(sgn => {
+
+			const spread = t * (0.16 + (flap * sgn * f > 0 ? 0.2 : 0.12) + Math.abs(flap) * 0.08);
+
+			ctx.beginPath();
+			ctx.moveTo(cx, by - t * 0.04);
+			ctx.quadraticCurveTo(cx + sgn * spread, by - t * 0.42, cx + sgn * spread * 1.25, by - t * 0.1);
+			ctx.quadraticCurveTo(cx + sgn * spread * 1.1, by + t * 0.2, cx, by + t * 0.08);
+			ctx.closePath();
+			ctx.fillStyle = wing; ctx.fill(); outline(ctx, t, 0.022);
+			ctx.beginPath();
+			ctx.arc(cx + sgn * spread * 0.8, by - t * 0.1, t * 0.05, 0, Math.PI * 2);
+			ctx.fillStyle = dark; ctx.fill();
+
+		});
+		ctx.restore();
+
+		ctx.beginPath();
+		ctx.ellipse(cx, by + t * 0.02, t * 0.065, t * 0.17, 0, 0, Math.PI * 2);
+		ctx.fillStyle = dark; ctx.fill(); outline(ctx, t, 0.02);
+
+		limb(ctx, dark, 0.022, t);
+		[-1, 1].forEach(sgn => {
+
+			ctx.beginPath();
+			ctx.moveTo(cx, by - t * 0.14);
+			ctx.quadraticCurveTo(cx + sgn * t * 0.06, by - t * 0.3, cx + sgn * t * 0.13 + f * t * 0.03, by - t * 0.3);
+			ctx.stroke();
+
+		});
+
+		eyes(ctx, cx - t * 0.03, by - t * 0.1, cx + t * 0.03, by - t * 0.1, Math.max(0.6, t * 0.024), '#ffe9b0');
+
+	},
+
+	// lean, grey, and already running
+	hound(ctx, cx, cy, t, st) {
+
+		const f    = st.facing, g = cy + t * 0.44;
+		const run  = st.moving ? Math.sin(st.phase) : Math.sin(st.phase) * 0.15;
+		const by   = g - t * 0.3 - Math.abs(run) * t * 0.03;
+		const coat = st.color, dark = shift(st.color, -0.5), pale = shift(st.color, 0.35);
+
+		ground(ctx, cx, g, t * 0.34, t * 0.07);
+
+		limb(ctx, dark, 0.05, t);
+		[[-0.2, 1], [-0.12, -1], [0.14, -1], [0.22, 1]].forEach(([o, dir]) => {
+
+			ctx.beginPath();
+			ctx.moveTo(cx + f * o * t, by + t * 0.06);
+			ctx.lineTo(cx + f * o * t + run * dir * t * 0.1, g);
+			ctx.stroke();
+
+		});
+
+		ctx.beginPath();
+		ctx.moveTo(cx - f * t * 0.28, by - t * 0.04);
+		ctx.quadraticCurveTo(cx - f * t * 0.46, by - t * 0.2 - run * t * 0.05, cx - f * t * 0.42, by - t * 0.32);
+		ctx.stroke();
+
+		ctx.beginPath();
+		ctx.moveTo(cx - f * t * 0.3, by + t * 0.05);
+		ctx.quadraticCurveTo(cx - f * t * 0.3, by - t * 0.17, cx, by - t * 0.15);
+		ctx.quadraticCurveTo(cx + f * t * 0.3, by - t * 0.2, cx + f * t * 0.3, by - t * 0.02);
+		ctx.quadraticCurveTo(cx + f * t * 0.1, by + t * 0.12, cx - f * t * 0.3, by + t * 0.05);
+		ctx.closePath();
+		ctx.fillStyle = coat; ctx.fill(); outline(ctx, t);
+
+		const hx = cx + f * t * 0.34, hy = by - t * 0.16;
+
+		ctx.beginPath();
+		ctx.moveTo(hx - f * t * 0.12, hy - t * 0.09);
+		ctx.lineTo(hx - f * t * 0.06, hy - t * 0.22);
+		ctx.lineTo(hx + f * t * 0.01, hy - t * 0.09);
+		ctx.quadraticCurveTo(hx + f * t * 0.16, hy - t * 0.04, hx + f * t * 0.2, hy + t * 0.05);
+		ctx.lineTo(hx + f * t * 0.04, hy + t * 0.1);
+		ctx.quadraticCurveTo(hx - f * t * 0.12, hy + t * 0.1, hx - f * t * 0.12, hy - t * 0.09);
+		ctx.closePath();
+		ctx.fillStyle = coat; ctx.fill(); outline(ctx, t, 0.024);
+
+		ctx.beginPath();
+		ctx.moveTo(hx + f * t * 0.07, hy + t * 0.06);
+		ctx.lineTo(hx + f * t * 0.19, hy + t * 0.05);
+		ctx.strokeStyle = pale;
+		ctx.lineWidth   = Math.max(0.6, t * 0.02);
+		ctx.stroke();
+
+		ctx.beginPath();
+		ctx.arc(hx + f * t * 0.03, hy - t * 0.03, Math.max(0.7, t * 0.03), 0, Math.PI * 2);
+		ctx.fillStyle = '#ffb060'; ctx.fill();
+
+	},
+
+	// still on the rota, still carrying a lamp with nothing in it
+	tender(ctx, cx, cy, t, st) {
+
+		const f    = st.facing, g = cy + t * 0.44;
+		const sway = Math.sin(st.phase * (st.moving ? 1 : 0.6)) * t * 0.02;
+		const topY = g - t * 0.9;
+		const robe = shift(st.color, -0.3), trim = st.color, dark = shift(st.color, -0.65);
+
+		ground(ctx, cx, g, t * 0.28, t * 0.065);
+
+		// the pole, and the dead lamp hanging off it
+
+		const px = cx + f * t * 0.3, lampY = topY + t * 0.26 + sway * 2;
+
+		limb(ctx, '#4a4038', 0.04, t);
+		ctx.beginPath();
+		ctx.moveTo(px - f * t * 0.03, g);
+		ctx.lineTo(px + f * t * 0.02, topY - t * 0.08);
+		ctx.lineTo(px + f * t * 0.14, topY - t * 0.04);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.rect(px + f * t * 0.14 - t * 0.055, lampY, t * 0.11, t * 0.15);
+		ctx.fillStyle = '#1b2226'; ctx.fill(); outline(ctx, t, 0.022);
+
+		ctx.beginPath();
+		ctx.moveTo(cx - t * 0.25, g);
+		ctx.quadraticCurveTo(cx - t * 0.24, g - t * 0.5, cx - t * 0.15 - f * t * 0.03, topY + t * 0.22);
+		ctx.quadraticCurveTo(cx + f * t * 0.03 + sway, topY + t * 0.02, cx + t * 0.16 + f * t * 0.03, topY + t * 0.22);
+		ctx.quadraticCurveTo(cx + t * 0.25, g - t * 0.5, cx + t * 0.25, g);
+		ctx.closePath();
+		ctx.fillStyle = robe; ctx.fill(); outline(ctx, t);
+
+		// the wet hem
+		ctx.beginPath();
+		ctx.moveTo(cx - t * 0.25, g);
+		ctx.quadraticCurveTo(cx, g - t * 0.12, cx + t * 0.25, g);
+		ctx.closePath();
+		ctx.fillStyle = dark; ctx.fill();
+
+		ctx.beginPath();
+		ctx.ellipse(cx + f * t * 0.05 + sway, topY + t * 0.2, t * 0.13, t * 0.15, 0, 0, Math.PI * 2);
+		ctx.fillStyle = trim; ctx.fill(); outline(ctx, t, 0.024);
+		ctx.beginPath();
+		ctx.ellipse(cx + f * t * 0.08 + sway, topY + t * 0.22, t * 0.085, t * 0.095, 0, 0, Math.PI * 2);
+		ctx.fillStyle = '#0d1517'; ctx.fill();
+		eyes(ctx, cx + f * t * 0.12 + sway, topY + t * 0.21, cx + f * t * 0.04 + sway, topY + t * 0.21,
+			Math.max(0.6, t * 0.026), '#bfe6e2');
+
+		limb(ctx, robe, 0.06, t);
+		ctx.beginPath();
+		ctx.moveTo(cx + f * t * 0.12, topY + t * 0.42);
+		ctx.lineTo(px, topY + t * 0.5);
+		ctx.stroke();
+
+	},
+
+	// it has not stopped singing; it has only run out of song
+	husk(ctx, cx, cy, t, st) {
+
+		const f    = st.facing, g = cy + t * 0.44;
+		const note = (Math.sin(st.phase * 1.7) + 1) * 0.5;
+		const hem  = g - t * 0.02;
+		const topY = hem - t * 0.94;
+		const robe = shift(st.color, -0.45), trim = st.color, pale = shift(st.color, 0.45);
+
+		ground(ctx, cx, g, t * 0.24, t * 0.06, 0.35);
+
+		ctx.beginPath();
+		ctx.moveTo(cx - t * 0.24, hem);
+		ctx.quadraticCurveTo(cx - t * 0.13, hem - t * 0.45, cx - t * 0.17, topY + t * 0.32);
+		ctx.lineTo(cx + t * 0.17, topY + t * 0.32);
+		ctx.quadraticCurveTo(cx + t * 0.13, hem - t * 0.45, cx + t * 0.24, hem);
+		ctx.closePath();
+		ctx.fillStyle = robe; ctx.fill(); outline(ctx, t);
+
+		// a chorister's collar
+		ctx.beginPath();
+		ctx.ellipse(cx, topY + t * 0.34, t * 0.2, t * 0.06, 0, 0, Math.PI * 2);
+		ctx.fillStyle = trim; ctx.fill(); outline(ctx, t, 0.022);
+
+		const hx = cx + f * t * 0.03, hy = topY + t * 0.17 - note * t * 0.02;
+
+		ctx.beginPath();
+		ctx.ellipse(hx, hy, t * 0.13, t * 0.16, f * -0.18, 0, Math.PI * 2);
+		ctx.fillStyle = pale; ctx.fill(); outline(ctx, t, 0.024);
+
+		ctx.beginPath();
+		ctx.ellipse(hx + f * t * 0.03, hy + t * 0.055, t * (0.04 + note * 0.02), t * (0.05 + note * 0.035), 0, 0, Math.PI * 2);
+		ctx.fillStyle = '#17101a'; ctx.fill();
+		eyes(ctx, hx + f * t * 0.075, hy - t * 0.05, hx + f * t * -0.02, hy - t * 0.05,
+			Math.max(0.6, t * 0.024), '#17101a');
+
+		// the note, going out
+		ctx.save();
+		ctx.globalAlpha *= 0.55 * (1 - note);
+		ctx.strokeStyle = pale;
+		ctx.lineWidth   = Math.max(0.6, t * 0.02);
+		ctx.beginPath();
+		ctx.arc(hx + f * t * 0.06, hy + t * 0.05, t * (0.12 + note * 0.2), f > 0 ? -0.9 : Math.PI - 0.9, f > 0 ? 0.9 : Math.PI + 0.9);
+		ctx.stroke();
+		ctx.restore();
+
+	},
+
+	// bones with a coal still lit behind the ribs
+	wight(ctx, cx, cy, t, st) {
+
+		const g = cy + t * 0.44, big = 1.14;
+
+		DRAW.skeleton(ctx, cx, cy - t * 0.44 * (big - 1), t * big, Object.assign({}, st, { color: shift(st.color, -0.3) }));
+
+		const ey = g - t * 0.6, pulse = 0.6 + Math.sin(st.phase * 2.3) * 0.2;
+
+		ctx.save();
+		ctx.globalCompositeOperation = 'lighter';
+
+		const coal = ctx.createRadialGradient(cx, ey, 0, cx, ey, t * 0.4);
+
+		coal.addColorStop(0, 'rgba(255,150,60,' + pulse + ')');
+		coal.addColorStop(1, 'rgba(200,70,20,0)');
+		ctx.fillStyle = coal;
+		ctx.fillRect(cx - t * 0.5, ey - t * 0.5, t, t);
+		ctx.restore();
+
+		// what is left of a flame, where the hair was
+		ctx.beginPath();
+		ctx.moveTo(cx - t * 0.1, g - t * 1.0);
+		ctx.quadraticCurveTo(cx - t * 0.06 + Math.sin(st.phase * 2) * t * 0.04, g - t * 1.2, cx + st.facing * t * 0.02, g - t * 1.27);
+		ctx.quadraticCurveTo(cx + t * 0.09, g - t * 1.14, cx + t * 0.1, g - t * 1.0);
+		ctx.closePath();
+		ctx.fillStyle = st.color; ctx.fill();
+
+	},
+
+	// a shade that learned to use its hands
+	stalker(ctx, cx, cy, t, st) {
+
+		const f = st.facing, g = cy + t * 0.44, big = 1.2;
+
+		DRAW.shade(ctx, cx, cy - t * 0.44 * (big - 1), t * big, st);
+
+		const reach = Math.sin(st.phase * 1.5) * t * 0.04;
+
+		ctx.save();
+		ctx.globalAlpha *= 0.85;
+		ctx.strokeStyle = shift(st.color, -0.55);
+		ctx.lineCap     = 'round';
+		[-1, 1].forEach(sgn => {
+
+			const sx = cx + sgn * t * 0.2, sy = g - t * 0.72;
+			const hx = cx + sgn * t * 0.44 + f * t * 0.05, hy = g - t * 0.34 + reach * sgn;
+
+			ctx.lineWidth = Math.max(1, t * 0.05);
+			ctx.beginPath();
+			ctx.moveTo(sx, sy);
+			ctx.quadraticCurveTo(cx + sgn * t * 0.52, g - t * 0.62, hx, hy);
+			ctx.stroke();
+			ctx.lineWidth = Math.max(0.7, t * 0.024);
+
+			for (let i = -1; i <= 1; i++) {
+				ctx.beginPath();
+				ctx.moveTo(hx, hy);
+				ctx.lineTo(hx + i * t * 0.06 + sgn * t * 0.03, hy + t * 0.17);
+				ctx.stroke();
+			}
+
+		});
+		ctx.restore();
+
+	},
+
+	// the ossuary's keeper: twice the bones, a helm, and a slab for a shield
+	warden(ctx, cx, cy, t, st) {
+
+		const f = st.facing, g = cy + t * 0.44, big = 1.42;
+
+		DRAW.skeleton(ctx, cx, cy - t * 0.44 * (big - 1), t * big, st);
+
+		const headY = g - t * 1.13;
+
+		ctx.beginPath();
+		ctx.moveTo(cx - t * 0.21, headY + t * 0.02);
+		ctx.quadraticCurveTo(cx - t * 0.2, headY - t * 0.24, cx + f * t * 0.03, headY - t * 0.26);
+		ctx.quadraticCurveTo(cx + t * 0.22, headY - t * 0.24, cx + t * 0.23, headY + t * 0.02);
+		ctx.closePath();
+		ctx.fillStyle = '#5b6170'; ctx.fill(); outline(ctx, t, 0.026);
+		ctx.beginPath();
+		ctx.moveTo(cx + f * t * 0.03, headY - t * 0.26);
+		ctx.lineTo(cx + f * t * 0.03, headY - t * 0.4);
+		ctx.strokeStyle = '#5b6170';
+		ctx.lineWidth   = Math.max(1, t * 0.05);
+		ctx.stroke();
+
+		const sx = cx + f * t * 0.3, sy = g - t * 0.5;
+
+		ctx.beginPath();
+		ctx.moveTo(sx - t * 0.15, sy - t * 0.26);
+		ctx.lineTo(sx + t * 0.15, sy - t * 0.26);
+		ctx.lineTo(sx + t * 0.13, sy + t * 0.14);
+		ctx.lineTo(sx, sy + t * 0.3);
+		ctx.lineTo(sx - t * 0.13, sy + t * 0.14);
+		ctx.closePath();
+		ctx.fillStyle = '#787d8a'; ctx.fill(); outline(ctx, t, 0.03);
+		ctx.beginPath();
+		ctx.moveTo(sx, sy - t * 0.2);
+		ctx.lineTo(sx, sy + t * 0.2);
+		ctx.moveTo(sx - t * 0.09, sy - t * 0.06);
+		ctx.lineTo(sx + t * 0.09, sy - t * 0.06);
+		ctx.strokeStyle = shift(st.color, -0.1);
+		ctx.lineWidth   = Math.max(0.8, t * 0.03);
+		ctx.stroke();
+
+	},
+
+	// the last one on the rota, and the lamp it carries burns cold
+	hollow(ctx, cx, cy, t, st) {
+
+		const f = st.facing, g = cy + t * 0.44, big = 1.4;
+
+		DRAW.tender(ctx, cx, cy - t * 0.44 * (big - 1), t * big, st);
+
+		const lx = cx + f * t * big * 0.44, ly = g - t * big * 0.56 + Math.sin(st.phase * 0.6) * t * 0.05;
+
+		ctx.save();
+		ctx.globalCompositeOperation = 'lighter';
+
+		const cold = ctx.createRadialGradient(lx, ly, 0, lx, ly, t * 0.6);
+
+		cold.addColorStop(0, 'rgba(170,235,230,.7)');
+		cold.addColorStop(1, 'rgba(80,150,160,0)');
+		ctx.fillStyle = cold;
+		ctx.fillRect(lx - t * 0.7, ly - t * 0.7, t * 1.4, t * 1.4);
+		ctx.restore();
+
+	},
+
+	// it has kept the watch so long that the candles grew into it
+	vigil(ctx, cx, cy, t, st) {
+
+		const g = cy + t * 0.44, big = 1.5;
+
+		DRAW.acolyte(ctx, cx, cy - t * 0.44 * (big - 1), t * big, st);
+
+		const crownY = g - t * 1.44 + Math.sin(st.phase * 1.3) * t * 0.05;
+
+		[-0.22, -0.08, 0.06, 0.2].forEach((o, i) => {
+
+			const x = cx + o * t, h = t * (0.13 + (i % 2) * 0.05);
+
+			ctx.beginPath();
+			ctx.rect(x - t * 0.025, crownY - h, t * 0.05, h);
+			ctx.fillStyle = '#e9dfc4'; ctx.fill();
+
+			ctx.save();
+			ctx.globalCompositeOperation = 'lighter';
+
+			const fy    = crownY - h - t * 0.04;
+			const flame = ctx.createRadialGradient(x, fy, 0, x, fy, t * 0.16);
+
+			flame.addColorStop(0, 'rgba(255,214,140,' + (0.65 + Math.sin(st.phase * 3 + i) * 0.2) + ')');
+			flame.addColorStop(1, 'rgba(240,150,60,0)');
+			ctx.fillStyle = flame;
+			ctx.fillRect(x - t * 0.2, fy - t * 0.2, t * 0.4, t * 0.4);
+			ctx.restore();
+
+		});
+
+	},
+
 	// the thing that put the Everflame out: a cowl, and a snuffer where a face belongs
 	snuffer(ctx, cx, cy, t, st) {
 
