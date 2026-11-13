@@ -20,8 +20,9 @@ FAINT = (0x5c / 255, 0x64 / 255, 0x76 / 255)
 FLAME = (0xf0 / 255, 0xa9 / 255, 0x3c / 255)
 HOT = (0xff / 255, 0xdf / 255, 0xa0 / 255)
 
-ORDER = ['hero', 'rat', 'slug', 'goblin', 'wick', 'skeleton',
-         'fletcher', 'ghoul', 'acolyte', 'ogre', 'shade', 'snuffer']
+ORDER = ['hero', 'rat', 'slug', 'goblin', 'wick', 'skeleton', 'fletcher',
+         'ghoul', 'acolyte', 'ogre', 'shade', 'moth', 'hound', 'tender',
+         'husk', 'wight', 'stalker', 'warden', 'hollow', 'vigil', 'snuffer']
 
 
 # ---------------------------------------------------------------- colour
@@ -241,7 +242,7 @@ def main():
         written.append((key, cw, ch, os.path.getsize(path)))
 
     # 2. the bestiary sheet
-    cols, rows = 4, 3
+    cols, rows = 7, 3
     cell_w, cell_h = 320, 380
     pad_top, pad_bottom = 152, 76
     bw, bh = cols * cell_w, pad_top + rows * cell_h + pad_bottom
@@ -257,7 +258,7 @@ def main():
     cr.paint()
 
     text(cr, 'LANTERNFALL', bw / 2, 80, 56, HOT, 'serif', True, 'center', 12)
-    text(cr, 'what waits in the eight depths', bw / 2, 120, 24, FAINT, 'serif', False, 'center', 3)
+    text(cr, 'what waits in the twenty depths', bw / 2, 120, 24, FAINT, 'serif', False, 'center', 3)
 
     # one scale for every creature, so the sheet reports their real relative size
     tallest = max(boxes[k][3] - boxes[k][1] for k in ORDER)

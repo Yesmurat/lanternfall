@@ -8,6 +8,7 @@ import path from 'node:path';
 import { drawCreature } from '../src/creatures.js';
 import { Renderer } from '../src/render.js';
 import { MONSTERS } from '../src/data.js';
+import { PLAYER_SKINS } from '../src/game.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -87,8 +88,12 @@ const sheet = { tile: TILE, cx: CX, cy: CY, figures: {} };
 
 function note(m) {
 
+	if (m.final) {
+		return 'the twentieth depth';
+	}
+
 	if (m.boss) {
-		return 'the eighth depth';
+		return `depth ${m.depth[0]} \u00b7 keeps the stair`;
 	}
 
 	const traits = [];
@@ -139,12 +144,12 @@ for (const key of Object.keys(MONSTERS)) {
 	const { ctx, ops } = recorder();
 	const r = new Renderer({ getContext: () => ctx, getBoundingClientRect: () => ({ width: 0, height: 0 }) });
 
-	r.heroFacing = 1;
-	r.heroPhase  = 0.7;
+	// since co-op the renderer draws whichever player it is handed
+	const skin = PLAYER_SKINS[0];
+	const hero = { face: 1, phase: 0.7, cloak: skin.cloak, cloakDark: skin.dark, x: 0, y: 0 };
+	const lamp = r.lampAt(hero, CX, CY, TILE, 0);
 
-	const lamp = r.lampAt(CX, CY, TILE, 0);
-
-	r.drawHero(CX, CY, TILE, 0, true, lamp);
+	r.drawHero(hero, CX, CY, TILE, 0, true, lamp);
 	sheet.figures.hero = { label: 'the lantern-bearer', note: 'you, and the only light', ops };
 }
 
