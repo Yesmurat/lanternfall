@@ -237,6 +237,8 @@ export class Game {
 			this.bossAlive = !!MONSTERS[bossKey].final;
 		}
 
+		this.placeInscription(rooms, freeSpot);
+
 		// a second lantern means a second sword, so the floor pushes back harder
 
 		const party        = this.players.length;
@@ -284,6 +286,35 @@ export class Game {
 
 			if (spot) {
 				this.items.push({ x: spot.x, y: spot.y, ...drop });
+			}
+
+		}
+
+	}
+
+	// One inscription per floor, in a room off the way from stair to stair, so that
+	// finding it costs a detour and the oil the detour burns. See src/story.js.
+	placeInscription(rooms, freeSpot) {
+
+		const map    = this.map;
+		const holds  = (r, pt) => pt.x >= r.x && pt.x < r.x + r.w && pt.y >= r.y && pt.y < r.y + r.h;
+		const apart  = (r, pt) => Math.abs(r.cx - pt.x) + Math.abs(r.cy - pt.y);
+		const ranked = rooms
+			.filter(r => !holds(r, map.stairs))
+			.map(r => ({ r, far: Math.min(apart(r, map.start), apart(r, map.stairs)) }))
+			.sort((a, b) => b.far - a.far)
+			.map(o => o.r);
+		const pool   = ranked.length ? ranked : map.rooms.slice();
+		// one of the three most out-of-the-way rooms, so it is not always the same corner
+		const first  = this.rng.pick(pool.slice(0, 3));
+
+		for (const room of [first, ...pool.filter(r => r !== first)]) {
+
+			const spot = freeSpot(room);
+
+			if (spot) {
+				this.items.push({ x: spot.x, y: spot.y, type: 'inscription', beat: this.depth, read: false });
+				return;
 			}
 
 		}
@@ -1333,6 +1364,23 @@ export class Game {
 		const idx  = this.items.indexOf(item);
 		const x    = item.x, y = item.y;
 		const look = itemLook(item);
+
+		// an inscription stays where it is; the page shown to the player and the
+		// journal entry are the front end's business (main.js watches for `read`)
+
+		if (item.type === 'inscription') {
+
+			if (!item.read) {
+				item.read = true;
+				this.sfx.play('pickup');
+				this.fx.burst(x + 0.5, y + 0.5, '255,223,160', 16, { speed: 2.6, gravity: -1.2, life: 0.8 });
+				this.log(`${this.verb(p, 'find words cut into the stone, and stop to read them',
+					'finds words cut into the stone, and stops to read them')}.`, 'warm');
+			}
+
+			return;
+
+		}
 
 		// gear no better than yours stays on the floor, and says so once per person
 

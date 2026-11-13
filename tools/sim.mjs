@@ -47,6 +47,10 @@ function wants(g, it) {
 		return true;
 	}
 
+	if (it.type === 'inscription') {
+		return !it.read;
+	}
+
 	if (it.type === 'part') {
 		return !g.player.parts.includes(it.id);
 	}

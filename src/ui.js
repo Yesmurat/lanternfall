@@ -1,6 +1,7 @@
-import { CONSUMABLES, WEAPONS, ARMOUR, XP_STEPS, itemLook, DEPTH_NAMES } from './data.js';
+import { CONSUMABLES, WEAPONS, ARMOUR, XP_STEPS, itemLook, DEPTH_NAMES, FINAL_DEPTH } from './data.js';
 import { Game } from './game.js';
 import { SUPPORT_URL } from './support-config.js';
+import { BEATS, EPILOGUE, ACT_NAMES, actOf, deathLine, unlocked, readCount } from './story.js';
 
 const $ = id => document.getElementById(id);
 
@@ -16,6 +17,9 @@ export class UI {
 			xpText: $('xp-text'), xpBar: $('xp-bar'), gear: $('gear'),
 			inv: $('inv'), log: $('log'),
 			veilTitle: $('veil-title'), veilOver: $('veil-over'), veilHelp: $('veil-help'),
+			veilBeat: $('veil-beat'), beatKicker: $('beat-kicker'), beatTitle: $('beat-title'), beatText: $('beat-text'),
+			veilJournal: $('veil-journal'), journalKicker: $('journal-kicker'), journalList: $('journal-list'),
+			btnJournal: $('btn-journal'),
 			overTitle: $('over-title'), overKicker: $('over-kicker'), overBody: $('over-body'),
 			tDepth: $('t-depth'), tKills: $('t-kills'), tTurns: $('t-turns'), tLevel: $('t-level'),
 			bestLine: $('best-line'), overBest: $('over-best'),
@@ -239,6 +243,10 @@ export class UI {
 				? `deepest descent <b>${best.depth}</b> · slain <b>${best.kills}</b>${best.won ? ' · <b>the Everflame burns again</b>' : ''}`
 				: 'no one has carried the lantern down yet';
 			this.el.resume.hidden = !Game.loadSave();
+
+			const read = readCount();
+
+			this.el.btnJournal.textContent = read ? `Journal · ${read} / ${FINAL_DEPTH}` : 'Journal';
 		}
 
 		if (s === 'dead' || s === 'won') {
@@ -246,20 +254,119 @@ export class UI {
 
 			this.el.overTitle.textContent  = won ? 'The Everflame catches' : 'The light goes out';
 			this.el.overKicker.textContent = won
-				? 'depth eight · the dark falls back'
+				? 'depth twenty · the dark falls back'
 				: `${game.deathCause || 'lost in the dark'} on depth ${game.depth}`;
-			this.el.overBody.textContent = won
-				? 'Light climbs the stairwell behind you, room by room, and the Sump remembers what it was. Your lantern is just a lantern again.'
-				: 'The dark closes over the place where you stood. Somewhere below, the Everflame stays cold.';
-			this.el.tDepth.textContent = game.depth;
-			this.el.tKills.textContent = game.kills;
-			this.el.tTurns.textContent = game.turns;
-			this.el.tLevel.textContent = game.players.map(q => q.level).join(' / ');
+			this.el.overBody.textContent = won ? EPILOGUE.text : deathLine(game.depth);
+			this.el.tDepth.textContent   = game.depth;
+			this.el.tKills.textContent   = game.kills;
+			this.el.tTurns.textContent   = game.turns;
+			this.el.tLevel.textContent   = game.players.map(q => q.level).join(' / ');
 
 			const best = Game.best();
 
 			this.el.overBest.innerHTML = best ? `deepest descent so far <b>${best.depth}</b>` : '';
 		}
+
+	}
+
+	// ---------------------------------------------------------------- story
+
+	// the page shown the first time an inscription is read
+	showBeat(depth) {
+
+		const beat = BEATS[depth];
+
+		if (!beat) {
+			return;
+		}
+
+		this.el.beatKicker.textContent = `depth ${depth} · ${DEPTH_NAMES[depth]}`;
+		this.el.beatTitle.textContent  = beat.title;
+		this.el.beatText.textContent   = beat.text;
+		this.el.veilBeat.hidden        = false;
+		this.el.veilBeat.scrollTop     = 0;
+
+	}
+
+	hideBeat() {
+
+		this.el.veilBeat.hidden = true;
+
+	}
+
+	get beatOpen() {
+
+		return !this.el.veilBeat.hidden;
+
+	}
+
+	// every entry in order; the ones not yet found keep their place but not their words
+	showJournal(show) {
+
+		this.el.veilJournal.hidden = !show;
+
+		if (!show) {
+			return;
+		}
+
+		const have = unlocked();
+		const list = this.el.journalList;
+		const add  = (tag, text, cls) => {
+
+			const node = document.createElement(tag);
+
+			node.textContent = text;
+
+			if (cls) {
+				node.className = cls;
+			}
+
+			return node;
+
+		};
+		const entry = (where, found, title, text) => {
+
+			const art = document.createElement('article');
+
+			art.className = found ? '' : 'unread';
+			art.appendChild(add('div', where, 'where'));
+			art.appendChild(add('h3', found ? title : 'not yet found'));
+
+			if (found) {
+				art.appendChild(add('p', text));
+			}
+
+			list.appendChild(art);
+
+		};
+
+		list.textContent = '';
+
+		for (let d = 1; d <= FINAL_DEPTH; d++) {
+
+			if ((d - 1) % 5 === 0) {
+				list.appendChild(add('h2', ACT_NAMES[actOf(d)]));
+			}
+
+			entry(`depth ${d} · ${DEPTH_NAMES[d]}`, have.has(d), BEATS[d].title, BEATS[d].text);
+
+		}
+
+		list.appendChild(add('h2', 'After'));
+		entry('the Everflame, relit', have.has('epilogue'), EPILOGUE.title, EPILOGUE.text);
+
+		const read = readCount();
+
+		this.el.journalKicker.textContent = read
+			? `${read} of ${FINAL_DEPTH} inscriptions read`
+			: 'nothing read yet · every depth hides one inscription';
+		list.scrollTop = 0;
+
+	}
+
+	get journalOpen() {
+
+		return !this.el.veilJournal.hidden;
 
 	}
 

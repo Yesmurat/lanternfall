@@ -15,7 +15,7 @@ const dist       = path.join(root, 'dist');
 const BODY_START = '<div class="wrap">';
 
 const DESCRIPTION =
-	'A turn-based roguelike in eight procedurally generated depths, where the oil in your lantern is your field of view.';
+	'A turn-based roguelike in twenty procedurally generated depths, where the oil in your lantern is your field of view.';
 
 const FAVICON = 'data:image/svg+xml,' + encodeURIComponent(
 	`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">` +

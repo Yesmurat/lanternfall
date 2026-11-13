@@ -25,7 +25,7 @@ export const MONSTERS = {
 
 	warden:   { name: 'the Bone Warden',   glyph: 'K', color: '#e9e4d2', hp: 54,  power: 9,  def: 3,  speed: 0.9, xp: 70,  depth: [5, 5],   weight: 0,  boss: true, drop: { type: 'weapon', id: 'hammer' } },
 	hollow:   { name: 'the Hollow Tender', glyph: 'T', color: '#7fb3b0', hp: 110, power: 16, def: 6,  speed: 0.9, xp: 160, depth: [10, 10], weight: 0,  boss: true, drop: { type: 'armour', id: 'mail' }, ranged: { range: 7, power: 9, name: 'pale lamp-beam', drain: 12 } },
-	vigil:    { name: 'the Vigil-Keeper',  glyph: 'V', color: '#d8c9a0', hp: 150, power: 20, def: 9,  speed: 1,   xp: 300, depth: [15, 15], weight: 0,  boss: true, drop: { type: 'weapon', id: 'spear' }, summon: { key: 'moth', max: 2, every: 8, line: 'The Vigil-Keeper shakes a lamp moth out of its sleeve.' } },
+	vigil:    { name: 'the Tallow King',   glyph: 'V', color: '#d8c9a0', hp: 150, power: 20, def: 9,  speed: 1,   xp: 300, depth: [15, 15], weight: 0,  boss: true, drop: { type: 'weapon', id: 'spear' }, summon: { key: 'moth', max: 2, every: 8, line: 'The Tallow King shakes a lamp moth out of its wax.' } },
 	snuffer:  { name: 'the Snuffer',       glyph: '&', color: '#e8574c', hp: 220, power: 26, def: 12, speed: 1,   xp: 500, depth: [20, 20], weight: 0,  boss: true, final: true, drop: { type: 'weapon', id: 'brand' }, ranged: { range: 9, power: 14, name: 'cold gust', drain: 20 }, summon: { key: 'wick', max: 3, every: 6, line: 'The Snuffer coughs out another wick-eater.' } },
 };
 
@@ -135,6 +135,11 @@ export function lootFor(rng, depth) {
 }
 
 export function itemLook(item) {
+
+	// words cut into the stone: read where they stand, never carried
+	if (item.type === 'inscription') {
+		return { name: 'inscription', glyph: '¶', color: item.read ? '#8a8474' : '#ffdfa0' };
+	}
 
 	if (item.type === 'use') {
 		return CONSUMABLES[item.id];

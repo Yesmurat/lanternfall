@@ -117,12 +117,24 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .seedbox{display:flex;gap:7px;justify-content:center;align-items:center;margin-top:18px;flex-wrap:wrap}
 .seedbox label{font-family:var(--mono);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-faint)}
 .seedbox input{font-family:var(--mono);font-size:.78rem;background:#070a10;border:1px solid var(--edge);color:var(--bone);
-  padding:8px 10px;width:150px;border-radius:2px}
+  padding:8px 10px;width:210px;max-width:100%;border-radius:2px}
 .best{font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-faint);margin-top:18px}
 .best b{color:var(--flame)}
 .sheet .support{font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;margin:16px auto 0}
 .support a{color:var(--bone-faint);text-decoration:none;border-bottom:1px solid var(--edge);padding-bottom:2px;transition:color .16s,border-color .16s}
 .support a:hover,.support a:focus-visible{color:var(--flame);border-color:var(--flame)}
+/* story: the page shown at an inscription, and the journal that keeps them */
+.sheet .beat{font-size:1.16rem;line-height:1.6;color:var(--bone);max-width:44ch;margin:18px auto 0;text-align:left;text-wrap:pretty}
+.journal{text-align:left;margin:18px 0 0;max-height:min(52vh,460px);overflow:auto;border-top:1px solid var(--edge-soft);
+  border-bottom:1px solid var(--edge-soft);padding:4px 10px 4px 0}
+.journal h2{font-family:var(--mono);font-size:.6rem;font-weight:500;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--flame);margin:18px 0 8px}
+.journal article{padding:9px 0 11px;border-top:1px solid var(--edge-soft)}
+.journal h2 + article{border-top:0}
+.journal .where{font-family:var(--mono);font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-faint)}
+.journal h3{font-family:var(--display);font-weight:600;font-size:1rem;letter-spacing:.06em;color:var(--flame-hot);margin:3px 0 5px}
+.journal article p{max-width:none;margin:0;color:var(--bone-dim);font-size:1rem;line-height:1.55}
+.journal article.unread h3{color:var(--bone-faint);font-family:var(--prose);font-style:italic;font-weight:400;letter-spacing:0}
 .tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:1px;background:var(--edge-soft);
   border:1px solid var(--edge-soft);margin:22px 0 4px;text-align:center}
 .tally div{background:rgba(10,14,22,.8);padding:11px 6px}
@@ -194,9 +206,9 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
       <div class="veil" id="veil-title">
         <div class="sheet">
           <h1>Lanternfall</h1>
-          <p class="kicker">a descent in eight depths</p>
-          <p>The Everflame went out, and the dark came up the stairwell. You carry the last lit lantern into the Sump.</p>
-          <p><em>Your lantern is your eyes.</em> Every step burns oil, and as the oil goes the light closes in around you. Find flasks, keep to the braziers, and reach the eighth depth before the wick runs dry.</p>
+          <p class="kicker">a descent in twenty depths</p>
+          <p>The Everflame went out, and the dark came up the stairwell. You were born down there. You carry the last lit lantern back.</p>
+          <p><em>Your lantern is your eyes.</em> Every step burns oil, and as the oil goes the light closes in around you. Find flasks, keep to the braziers, and read what is cut into the stone: twenty depths, and each one remembers you.</p>
           <div class="seedbox">
             <label for="seed">seed</label>
             <input id="seed" type="text" placeholder="leave blank for chance" maxlength="18" autocomplete="off" spellcheck="false">
@@ -204,6 +216,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
           <div class="cta">
             <button class="btn" id="btn-new">Light the lantern</button>
             <button class="btn ghost" id="btn-resume" hidden>Resume descent</button>
+            <button class="btn ghost" id="btn-journal">Journal</button>
           </div>
           <div class="coop" id="coop-box">
             <div class="coop-row">
@@ -239,6 +252,24 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
         </div>
       </div>
 
+      <div class="veil" id="veil-beat" hidden>
+        <div class="sheet">
+          <p class="kicker" id="beat-kicker"></p>
+          <h1 class="small" id="beat-title"></h1>
+          <p class="beat" id="beat-text"></p>
+          <div class="cta"><button class="btn" id="btn-close-beat">Carry it down</button></div>
+        </div>
+      </div>
+
+      <div class="veil" id="veil-journal" hidden>
+        <div class="sheet">
+          <h1 class="small">Journal</h1>
+          <p class="kicker" id="journal-kicker"></p>
+          <div class="journal" id="journal-list"></div>
+          <div class="cta"><button class="btn" id="btn-close-journal">Close the book</button></div>
+        </div>
+      </div>
+
       <div class="veil" id="veil-help" hidden>
         <div class="sheet">
           <h1 class="small">Keys &amp; signs</h1>
@@ -264,6 +295,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
             <div><b style="color:#cfd6e4">/</b>weapon</div>
             <div><b style="color:#cfd6e4">[</b>armour</div>
             <div><b style="color:#64c0a2">=</b>lantern part</div>
+            <div><b style="color:#ffdfa0">&para;</b>inscription</div>
             <div><b style="color:#98907e">+</b>door</div>
             <div><b style="color:#eae2d1">&gt;</b>stairs down</div>
             <div><b style="color:#f0a93c">&#9679;</b>brazier (free light)</div>

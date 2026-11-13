@@ -2,12 +2,12 @@
 
 **[Play it](https://yesmurat.github.io/lanternfall)**
 
-A turn-based roguelike in eight procedurally generated depths, where **the oil in your lantern is your field of view**.
+A turn-based roguelike in twenty procedurally generated depths, where **the oil in your lantern is your field of view**.
 
 Every step burns a unit of oil. As the oil drops the circle of light closes in around you, until you are
 seeing one tile in any direction and fighting things you can only hear. Braziers scattered through the
 rooms give light you don't have to pay for, so a run becomes a route between islands of free light.
-Reach the eighth depth, put down the Snuffer, and relight the Everflame.
+Reach the twentieth depth, put down the Snuffer, and relight the Everflame.
 
 No engine, no build step for development, no art assets — everything on screen is drawn with the
 Canvas 2D API and every sound is synthesised with the Web Audio API at runtime.
@@ -25,6 +25,17 @@ Canvas 2D API and every sound is synthesised with the Web Audio API at runtime.
 | `M` | mute |
 
 Walk into a creature to attack it. On a touch screen a directional pad appears below the map.
+
+## Story
+
+Every depth hides one inscription, placed in a room off the way from stair to stair, so reading it
+costs a detour and the oil the detour burns. The first time you step onto one, its page opens; after
+that it lives in the **Journal** on the title screen. What you have read is kept apart from the run
+itself, so it survives death, an abandoned run and a new seed, and the lantern-bearer's history fills
+in over many descents.
+
+All of the story's text is in `src/story.js`, one entry per depth, and can be edited without touching
+anything else.
 
 ## Co-op
 
@@ -100,7 +111,7 @@ itself is untouched.
 
 ## Art
 
-`art/` holds a bestiary sheet, an itch.io cover and transparent cut-outs of all eleven creatures plus
+`art/` holds a bestiary sheet, an itch.io cover and transparent cut-outs of all twenty creatures plus
 the lantern-bearer. None of it is hand-drawn: `tools/record-art.mjs` records the canvas calls the game
 actually makes, and `tools/render-art.py` replays them into Cairo, so the page art and the in-game art
 cannot drift apart. Regenerate with those two commands after changing any drawing code.
@@ -115,6 +126,7 @@ src/dungeon.js    map generation         src/fov.js         recursive shadowcast
 src/path.js       breadth-first chase    src/data.js        monsters, loot, depth names
 src/fx.js         particles, shake       src/audio.js       synthesised sound
 src/rng.js        seeded random          src/ui.js          HUD, log, overlays
+src/story.js      inscriptions, journal
 ```
 
 `src/net-config.js` and `src/support-config.js` hold the two addresses you set yourself: the co-op relay
@@ -141,9 +153,12 @@ two real bugs that reading the diff did not.
 ## Balance
 
 Tuned against a headless simulation that plays the game with no renderer (60–70 runs per pass). A bot
-that rushes the stairs dies around depth 5–6 as the oil runs out; a bot that sweeps rooms and collects
-oil reaches depth 8 and wins about two thirds of the time. Exploring costs turns but pays for itself —
-that trade is the game.
+that rushes the stairs usually dies to the boss on depth 5 or depth 10; a bot that sweeps rooms and
+collects what it finds reaches depth 20 and wins about four runs in ten. Exploring costs turns but pays
+for itself — that trade is the game.
+
+`MODE=rush node tools/sim.mjs` plays the rusher, and `TABLE=1` prints the player's level, health and
+oil on arriving at each depth, which is the quickest way to see where a change bites.
 
 ## Licence
 

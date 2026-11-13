@@ -4,6 +4,7 @@ import { UI } from './ui.js';
 import { FX } from './fx.js';
 import { Sfx } from './audio.js';
 import { Net, HAS_RELAY, makeRoomCode } from './net.js';
+import { BEATS, unlock } from './story.js';
 
 const canvas   = document.getElementById('map');
 const fx       = new FX();
@@ -125,13 +126,58 @@ function broadcast() {
 
 }
 
+// The game only marks an inscription as read. Turning that into a page and a
+// journal entry happens here, on each player's own screen, so it works the same
+// for a solo run, a host and a guest: all three end up holding the same items.
+
+//
+// `quiet` is for picking a run back up (a resumed save, a guest rejoining): what
+// was read before the break is noted without being announced a second time.
+
+const shownBeats = new Set();      // seed + floor of each inscription this screen has already dealt with
+
+function checkStory(quiet = false) {
+
+	for (const item of game.items) {
+
+		const key = `${game.seedText}#${item.beat}`;
+
+		if (item.type !== 'inscription' || !item.read || shownBeats.has(key)) {
+			continue;
+		}
+
+		shownBeats.add(key);
+
+		const beat  = BEATS[item.beat];
+		const fresh = beat && unlock(item.beat);
+
+		if (!beat || quiet) {
+			continue;
+		}
+
+		if (fresh) {
+			ui.showBeat(item.beat);
+		}
+
+		else {
+			ui.pushMessage({ text: `You have read this one before: “${beat.title}”. It is in your journal.`, cls: 'dim' });
+		}
+
+	}
+
+	if (game.screen === 'won') {
+		unlock('epilogue');
+	}
+
+}
+
 // every action in the game funnels through here
 
 function submit(action) {
 
 	wake();
 
-	if (game.screen !== 'play') {
+	if (game.screen !== 'play' || ui.beatOpen || ui.journalOpen) {
 		return;
 	}
 
@@ -141,6 +187,7 @@ function submit(action) {
 
 	game.act(action, 0);
 	broadcast();
+	checkStory();
 
 }
 
@@ -231,6 +278,7 @@ const net = new Net({
 			ui.setScreen(game);
 			ui.renderInv(game);
 			ui.refresh(game);
+			checkStory(true);
 			return;
 		}
 
@@ -239,6 +287,7 @@ const net = new Net({
 			game.applyTick(msg);
 			replayEffects(msg);
 			ui.refresh(game);
+			checkStory();
 
 			if (game.screen !== 'play') {
 				ui.setScreen(game);
@@ -328,6 +377,7 @@ function startCoop() {
 
 	ui.el.log.textContent = '';
 	renderer.started      = false;
+	shownBeats.clear();
 	game.newRun(ui.el.seed.value, { playerCount: 2, localIndex: 0 });
 	lastDepth = game.depth;
 
@@ -411,6 +461,7 @@ function startRun(seedText) {
 	ui.setNet('');
 	ui.el.log.textContent = '';
 	renderer.started      = false;
+	shownBeats.clear();
 	game.newRun(seedText);
 	lastDepth = game.depth;
 	ui.setScreen(game);
@@ -436,6 +487,8 @@ function resumeRun() {
 	if (game.restore(data)) {
 		lastDepth = game.depth;
 		ui.redrawLog(game);
+		shownBeats.clear();
+		checkStory(true);
 		game.log('You pick the lantern back up where you set it down.', 'warm');
 		ui.setScreen(game);
 		ui.renderInv(game);
@@ -452,6 +505,9 @@ document.getElementById('btn-again').addEventListener('click', () => startRun(''
 document.getElementById('btn-same').addEventListener('click', () => startRun(game.seedText));
 document.getElementById('btn-help').addEventListener('click', () => ui.showHelp(!ui.helpOpen));
 document.getElementById('btn-close-help').addEventListener('click', () => ui.showHelp(false));
+document.getElementById('btn-close-beat').addEventListener('click', () => ui.hideBeat());
+document.getElementById('btn-journal').addEventListener('click', () => ui.showJournal(true));
+document.getElementById('btn-close-journal').addEventListener('click', () => ui.showJournal(false));
 document.getElementById('btn-descend').addEventListener('click', () => submit({ type: 'descend' }));
 
 document.getElementById('btn-quit').addEventListener('click', () => {
@@ -543,6 +599,20 @@ window.addEventListener('keydown', ev => {
 
 	if (ev.target && ev.target.tagName === 'INPUT') {
 		return;
+	}
+
+	// a story page or the journal holds the keyboard until it is put away
+
+	if (ui.beatOpen || ui.journalOpen) {
+
+		if (ev.key === 'Escape' || ev.key === 'Enter' || ev.key === ' ') {
+			ev.preventDefault();
+			ui.hideBeat();
+			ui.showJournal(false);
+		}
+
+		return;
+
 	}
 
 	if (ev.key === '?' || ev.key === '/') {
@@ -694,6 +764,7 @@ function boot(data) {
 
 			if (game.restore(data.save)) {
 				lastDepth = game.depth;
+				checkStory(true);
 				ui.redrawLog(game);
 				ui.setScreen(game);
 				ui.renderInv(game);

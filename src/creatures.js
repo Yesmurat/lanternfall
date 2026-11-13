@@ -937,7 +937,7 @@ const DRAW = {
 
 	},
 
-	// it has kept the watch so long that the candles grew into it
+	// it fed on the vigil's candle-ends until they grew into it
 	vigil(ctx, cx, cy, t, st) {
 
 		const g = cy + t * 0.44, big = 1.5;

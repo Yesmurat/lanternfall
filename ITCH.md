@@ -11,7 +11,7 @@ Everything listed here is already built. Create the project at
 | **Cover image** | `art/cover.png` | 630×500, the exact size itch wants |
 | **Screenshots** | `art/bestiary.png` | Plus a shot or two of real play — grab them from the game yourself |
 
-The eleven creature cut-outs in `art/monsters/` are transparent PNGs, there for the page body,
+The twenty creature cut-outs in `art/monsters/` are transparent PNGs, there for the page body,
 devlogs, social posts or a press kit. `hero.png` is the lantern-bearer.
 
 ## Settings
@@ -50,11 +50,14 @@ Braziers scattered through the dungeon give light you don't have to pay for, so 
 between islands of free light. Rush the stairs and you will reach the deep floors blind and broke.
 Sweep every room and the oil pays for itself, but the dungeon has that much longer to kill you.
 
-Eight procedurally generated depths. Bump to attack, hoard your flasks, and relight the Everflame.
+Twenty procedurally generated depths. Bump to attack, hoard your flasks, and relight the Everflame.
 
 **What's down there**
 
-- Eleven creatures, from cave rats to the Snuffer that put the Everflame out
+- Twenty creatures, from cave rats to the Snuffer that waits at the bottom, with a boss keeping the stair
+  every fifth depth
+- A story told in inscriptions: every depth hides one, and what you read stays in your journal even
+  when a run ends badly
 - Wick-eaters drink your oil; shades are invisible until real light finds them; acolytes strike from
   across the room
 - Weapons, armour and lantern parts that widen your light or hold more oil
